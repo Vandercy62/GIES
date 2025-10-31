@@ -1,0 +1,138 @@
+# =============================================
+# SISTEMA ERP PRIMOTEX - ARQUIVOS IGNORADOS
+# =============================================
+
+# =====================================
+# Python
+# =====================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =====================================
+# Ambientes virtuais
+# =====================================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =====================================
+# IDEs e Editores
+# =====================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =====================================
+# Sistema Operacional
+# =====================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =====================================
+# Banco de Dados
+# =====================================
+*.db
+*.sqlite
+*.sqlite3
+primotex_erp.db
+
+# =====================================
+# Logs
+# =====================================
+logs/
+*.log
+*.log.*
+
+# =====================================
+# Uploads e Arquivos Temporários
+# =====================================
+uploads/
+temp/
+tmp/
+*.tmp
+
+# =====================================
+# Backups
+# =====================================
+backups/
+*.backup
+*.sql.gz
+
+# =====================================
+# Configurações Sensíveis
+# =====================================
+.env
+config/local.py
+secrets.json
+
+# =====================================
+# Arquivos de Build
+# =====================================
+dist/
+build/
+*.spec
+
+# =====================================
+# Documentação Gerada
+# =====================================
+docs/_build/
+
+# =====================================
+# Coverage e Testes
+# =====================================
+.coverage
+.pytest_cache/
+coverage.xml
+*.cover
+.hypothesis/
+
+# =====================================
+# PyQt
+# =====================================
+*.ui
+*.qrc
+
+# =====================================
+# Específicos do Projeto
+# =====================================
+# Fotos de clientes/produtos (podem ser sensíveis)
+fotos_clientes/
+fotos_produtos/
+documentos_colaboradores/
+
+# Relatórios gerados
+relatorios_gerados/
+
+# Arquivos de configuração local
+config_local.json
