@@ -153,9 +153,9 @@ async def get_user_info(current_user: dict = Depends(get_current_user)):
 
 from backend.api.routers.clientes_router import router as clientes_router
 from backend.api.routers.auth_router import router as auth_router
-from backend.api.routers.ordem_servico_router import router as ordem_servico_router
 from backend.api.routers.agendamento_router import router as agendamento_router
 from backend.api.routers.financeiro_router_simples import router as financeiro_router
+from backend.api.routers.os_router import router as os_router
 
 # Incluir router de autenticação
 app.include_router(auth_router, prefix="/api/v1", tags=["Autenticação"])
@@ -163,8 +163,8 @@ app.include_router(auth_router, prefix="/api/v1", tags=["Autenticação"])
 # Incluir router de clientes
 app.include_router(clientes_router, prefix="/api/v1", tags=["Clientes"])
 
-# Incluir router de ordem de serviço (NOVO - Fase 3)
-app.include_router(ordem_servico_router, tags=["Ordem de Serviço"])
+# Incluir router de OS (Ordem de Serviço) - NOVO - Fase 3
+app.include_router(os_router, prefix="/api/v1", tags=["Ordem de Serviço"])
 
 # Incluir router de agendamento (NOVO - Fase 3)
 app.include_router(agendamento_router, tags=["Agendamento"])
@@ -175,6 +175,10 @@ app.include_router(financeiro_router, tags=["Financeiro"])
 # Incluir router de comunicação (NOVO - Fase 3)
 from backend.api.routers.comunicacao_router import router as comunicacao_router
 app.include_router(comunicacao_router, prefix="/api/v1", tags=["Comunicação"])
+
+# Incluir router de WhatsApp Business API (NOVO - Continuação)
+from backend.api.routers.whatsapp_router import router as whatsapp_router
+app.include_router(whatsapp_router, prefix="/api/v1", tags=["WhatsApp"])
 
 # =======================================
 # ENDPOINTS MOCK PARA DESENVOLVIMENTO
