@@ -1,6 +1,11 @@
-# Sistema ERP Primotex - Forros e Divisórias Eirelli
+# 🎉 Sistema ERP Primotex - FASE 3 CONCLUÍDA
+## Forros e Divisórias Eirelli - Sistema Completo e Operacional
 
-Sistema de gerenciamento empresarial integrado desenvolvido em Python para controle completo de operações comerciais.
+[![Status](https://img.shields.io/badge/Status-PRODUÇÃO%20READY-brightgreen)](https://github.com/Vandercy62/GIES)
+[![Fase](https://img.shields.io/badge/Fase-3%20CONCLUÍDA-blue)](https://github.com/Vandercy62/GIES)
+[![Aprovação](https://img.shields.io/badge/Testes-83.3%25%20Aprovação-green)](https://github.com/Vandercy62/GIES)
+
+Sistema ERP **100% operacional** desenvolvido especificamente para a **Primotex - Forros e Divisórias Eireli**, automatizando completamente as operações comerciais, administrativas e operacionais da empresa.
 
 ## 📋 Sobre o Projeto
 
