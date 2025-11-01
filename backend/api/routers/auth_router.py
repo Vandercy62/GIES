@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List
 
-from backend.database.config import get_database
+from backend.database.config import get_database, get_db
 from backend.models.user_model import Usuario, PERFIS_SISTEMA
 from backend.schemas.auth_schemas import (
     LoginRequest, LoginResponse, UserCreate, UserUpdate, 
@@ -50,10 +50,14 @@ router = APIRouter(
 # ENDPOINTS DE AUTENTICAÇÃO
 # =======================================
 
+from shared.logging_system import LogManager
+log_manager = LogManager()
+logger = log_manager.get_logger("login")
+
 @router.post("/login", response_model=LoginResponse, summary="Fazer login")
 async def login(
     login_data: LoginRequest,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
     """
     Autenticar usuário e retornar token de acesso.
@@ -63,51 +67,66 @@ async def login(
     
     Retorna token JWT válido por 8 horas.
     """
-    # Buscar usuário por username ou email
-    user = db.query(Usuario).filter(
-        (Usuario.username == login_data.username) | 
-        (Usuario.email == login_data.username)
-    ).first()
-    
-    # Verificar se usuário existe
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas"
+    import traceback
+    print("[DEBUG] Iniciando login para:", login_data.username)
+    try:
+        # Buscar usuário por username ou email
+        user = db.query(Usuario).filter(
+            (Usuario.username == login_data.username) |
+            (Usuario.email == login_data.username)
+        ).first()
+
+        # Verificar se usuário existe
+        if not user:
+            logger.warning(f"Usuário não encontrado: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciais inválidas"
+            )
+
+        # Verificar senha
+        if not verify_password(login_data.password, user.senha_hash):
+            logger.warning(f"Senha inválida para usuário: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciais inválidas"
+            )
+
+        # Verificar se usuário está ativo
+        if not user.ativo:
+            logger.warning(f"Usuário inativo: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Usuário inativo"
+            )
+
+        # Atualizar última atividade
+        user.ultima_atividade = datetime.now()
+        db.commit()
+
+        # Gerar token
+        access_token = generate_user_token(
+            user_id=user.id,
+            username=user.username,
+            email=user.email,
+            perfil=user.perfil
         )
-    
-    # Verificar senha
-    if not verify_password(login_data.password, user.senha_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas"
+
+        logger.info(f"Login bem-sucedido: {login_data.username}")
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Converter para segundos
+            user=UserResponse.model_validate(user)
         )
-    
-    # Verificar se usuário está ativo
-    if not user.ativo:
+    except Exception as e:
+        print("[ERRO LOGIN] Exceção capturada no endpoint de login:", e)
+        traceback.print_exc()
+        logger.error(f"Erro inesperado no login: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuário inativo"
+            status_code=500,
+            detail=f"Erro interno no login: {str(e)}"
         )
-    
-    # Atualizar última atividade
-    user.ultima_atividade = datetime.now()
-    db.commit()
-    
-    # Gerar token
-    access_token = generate_user_token(
-        user_id=user.id,
-        username=user.username,
-        email=user.email,
-        perfil=user.perfil
-    )
-    
-    return LoginResponse(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Converter para segundos
-        user=UserResponse.from_orm(user)
-    )
 
 @router.post("/logout", response_model=SuccessResponse, summary="Fazer logout")
 async def logout(current_user: Usuario = Depends(get_current_active_user)):
@@ -132,12 +151,12 @@ async def get_current_user_profile(
     """
     Obter informações do usuário logado atual.
     """
-    return UserResponse.from_orm(current_user)
+    return UserResponse.model_validate(current_user)
 
 @router.put("/me", response_model=UserResponse, summary="Atualizar perfil")
 async def update_current_user_profile(
     user_update: UserUpdate,
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """
@@ -177,7 +196,7 @@ async def update_current_user_profile(
     db.commit()
     db.refresh(current_user)
     
-    return UserResponse.from_orm(current_user)
+    return UserResponse.model_validate(current_user)
 
 # =======================================
 # ENDPOINTS DE GESTÃO DE SENHA
@@ -187,7 +206,7 @@ async def update_current_user_profile(
 async def change_password(
     password_data: PasswordChangeRequest,
     current_user: Usuario = Depends(get_current_active_user),
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_db)
 ):
     """
     Trocar senha do usuário atual.
@@ -234,7 +253,7 @@ async def change_password(
 
 @router.get("/users", response_model=List[UserResponse], summary="Listar usuários")
 async def list_users(
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_manager)
 ):
     """
@@ -243,12 +262,12 @@ async def list_users(
     Acesso restrito a gerentes e administradores.
     """
     users = db.query(Usuario).all()
-    return [UserResponse.from_orm(user) for user in users]
+    return [UserResponse.model_validate(user) for user in users]
 
 @router.post("/users", response_model=UserResponse, summary="Criar usuário")
 async def create_user(
     user_data: UserCreate,
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_admin)
 ):
     """
@@ -306,12 +325,12 @@ async def create_user(
     db.commit()
     db.refresh(new_user)
     
-    return UserResponse.from_orm(new_user)
+    return UserResponse.model_validate(new_user)
 
 @router.get("/users/{user_id}", response_model=UserResponse, summary="Obter usuário")
 async def get_user(
     user_id: int,
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_manager)
 ):
     """
@@ -326,13 +345,13 @@ async def get_user(
             detail="Usuário não encontrado"
         )
     
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 @router.put("/users/{user_id}", response_model=UserResponse, summary="Atualizar usuário")
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_admin)
 ):
     """
@@ -381,12 +400,12 @@ async def update_user(
     db.commit()
     db.refresh(user)
     
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 @router.post("/reset-password", response_model=SuccessResponse, summary="Resetar senha")
 async def reset_user_password(
     password_data: PasswordResetRequest,
-    db: Session = Depends(get_database),
+    db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_admin)
 ):
     """

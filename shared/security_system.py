@@ -38,6 +38,53 @@ except ImportError:
         return logging.getLogger(name)
 
 class SecurityManager:
+    def verify_security_config(self) -> dict:
+        """Verificar configurações críticas de segurança e retornar score/status"""
+        issues = []
+        warnings = []
+        score = 100
+
+        # Verificar força da SECRET_KEY
+        secret_key = self._get_config('secret_key', None)
+        if not secret_key or len(str(secret_key)) < 32:
+            issues.append("SECRET_KEY fraca ou ausente")
+            score -= 30
+
+        # Verificar algoritmo JWT
+        jwt_alg = self._get_config('jwt_algorithm', 'HS256')
+        if jwt_alg not in ['HS256', 'RS256']:
+            warnings.append(f"Algoritmo JWT não recomendado: {jwt_alg}")
+            score -= 10
+
+        # Verificar força de senha admin
+        admin_pwd = self._get_config('admin_password', None)
+        if admin_pwd:
+            pwd_check = self.validate_password_strength(admin_pwd)
+            if not pwd_check['valid']:
+                issues.append("Senha do admin fraca")
+                score -= 20
+        else:
+            warnings.append("Senha do admin não definida no config")
+            score -= 10
+
+        # Verificar se criptografia está ativa
+        if not hasattr(self, 'cipher'):
+            issues.append("Criptografia de dados não inicializada")
+            score -= 20
+
+        # Verificar rate limiting
+        if not hasattr(self, '_rate_limit_storage'):
+            warnings.append("Rate limiting não configurado")
+            score -= 10
+
+        status = "OK" if score >= 80 and not issues else ("ATENÇÃO" if score >= 60 else "CRÍTICO")
+        return {
+            "score": score,
+            "status": status,
+            "problemas_criticos": issues,
+            "avisos": warnings,
+            "passou": score >= 80 and not issues
+        }
     """Gerenciador de segurança do sistema"""
     
     def __init__(self, config_manager=None):

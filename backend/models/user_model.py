@@ -161,10 +161,39 @@ class Usuario(Base):
 # =======================================
 
 PERFIS_SISTEMA = [
-    "Administrador",  # Acesso total
-    "Gerente",       # Acesso gerencial
-    "Vendedor",      # Vendas e cadastros
-    "Financeiro",    # Financeiro
-    "Técnico",       # Execução de serviços
-    "Estoquista"     # Controle de estoque
+    {
+        "value": "administrador",
+        "label": "Administrador",
+        "description": "Acesso total ao sistema, incluindo configurações e gerenciamento de usuários"
+    },
+    {
+        "value": "gerente",
+        "label": "Gerente",
+        "description": "Acesso gerencial com controle de processos e relatórios"
+    },
+    {
+        "value": "vendedor",
+        "label": "Vendedor",
+        "description": "Acesso a vendas, cadastros de clientes e acompanhamento de ordens"
+    },
+    {
+        "value": "financeiro",
+        "label": "Financeiro",
+        "description": "Controle financeiro, contas a pagar/receber e relatórios"
+    },
+    {
+        "value": "tecnico",
+        "label": "Técnico",
+        "description": "Execução de serviços técnicos e atualização de ordens de serviço"
+    },
+    {
+        "value": "estoquista",
+        "label": "Estoquista",
+        "description": "Controle de estoque, entrada e saída de materiais"
+    },
+    {
+        "value": "consulta",
+        "label": "Consulta",
+        "description": "Acesso apenas para consulta e visualização de informações"
+    }
 ]

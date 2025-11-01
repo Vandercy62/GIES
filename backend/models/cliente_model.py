@@ -23,12 +23,28 @@ Autor: GitHub Copilot
 Data: 29/10/2025
 """
 
+
+# CONSTANTES PARA O SISTEMA
+# =======================================
+TIPOS_PESSOA = ["Física", "Jurídica"]
+STATUS_CLIENTE = ["Ativo", "Inativo", "Prospect"]
+ORIGENS_CLIENTE = [
+    "Google", "Indicação", "Facebook", "Instagram", 
+    "WhatsApp", "Site", "Telefone", "Visita", "Outros"
+]
+TIPOS_CLIENTE = ["Residencial", "Comercial", "Industrial", "Público"]
+
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Numeric, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.database.config import Base
 
 class Cliente(Base):
+    # Relacionamento com comunicações
+    comunicacoes = relationship(
+        "ComunicacaoHistorico",
+        back_populates="cliente"
+    )
     """
     Modelo da tabela de clientes.
     
@@ -64,8 +80,8 @@ class Cliente(Base):
     tipo_pessoa = Column(
         String(20),
         nullable=False,
-        default="Física",
-        comment="Tipo: Física ou Jurídica"
+        default=lambda: TIPOS_PESSOA[0],
+        comment=f"Tipo: {TIPOS_PESSOA[0]} ou {TIPOS_PESSOA[1]}"
     )
     
     # Nome/Razão Social
@@ -382,20 +398,20 @@ class Cliente(Base):
     
     def is_pessoa_fisica(self):
         """Verifica se é pessoa física"""
-        return self.tipo_pessoa == "Física"
-    
+        return self.tipo_pessoa == TIPOS_PESSOA[0]
+
     def is_pessoa_juridica(self):
         """Verifica se é pessoa jurídica"""
-        return self.tipo_pessoa == "Jurídica"
+        return self.tipo_pessoa == TIPOS_PESSOA[1]
     
     def is_ativo(self):
         """Verifica se cliente está ativo"""
         return self.status == "Ativo"
 
 # =======================================
+
 # CONSTANTES PARA O SISTEMA
 # =======================================
-
 TIPOS_PESSOA = ["Física", "Jurídica"]
 STATUS_CLIENTE = ["Ativo", "Inativo", "Prospect"]
 ORIGENS_CLIENTE = [

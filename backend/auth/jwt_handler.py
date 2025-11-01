@@ -31,6 +31,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # FUNÇÕES DE HASH DE SENHA
 # =======================================
 
+  
 def hash_password(password: str) -> str:
     """
     Fazer hash da senha usando bcrypt.
@@ -41,8 +42,25 @@ def hash_password(password: str) -> str:
     Returns:
         Hash da senha
     """
+    # CORREÇÃO DE SEGURANÇA: Truncar senha respeitando limite de bytes
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncar em bytes e decodificar seguramente
+        truncated_bytes = password_bytes[:72]
+        try:
+            password = truncated_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            # Se cortou no meio de um caractere, remover último byte
+            for i in range(1, 5):
+                try:
+                    password = truncated_bytes[:-i].decode('utf-8')
+                    break
+                except UnicodeDecodeError:
+                    continue
+    
     return pwd_context.hash(password)
 
+  
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verificar se a senha está correta.
@@ -54,13 +72,33 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True se a senha estiver correta
     """
+    # CORREÇÃO DE SEGURANÇA: Truncar senha respeitando limite de bytes
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncar em bytes e decodificar seguramente
+        truncated_bytes = password_bytes[:72]
+        try:
+            plain_password = truncated_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            # Se cortou no meio de um caractere, remover último byte
+            for i in range(1, 5):
+                try:
+                    plain_password = truncated_bytes[:-i].decode('utf-8')
+                    break
+                except UnicodeDecodeError:
+                    continue
+    
     return pwd_context.verify(plain_password, hashed_password)
 
 # =======================================
 # FUNÇÕES JWT
 # =======================================
 
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+  
+def create_access_token(
+    data: Dict[str, Any], 
+    expires_delta: Optional[timedelta] = None
+) -> str:
     """
     Criar token de acesso JWT.
     
@@ -76,13 +114,17 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = (
+            datetime.now(timezone.utc) + 
+            timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
     
     to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
     
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+  
 def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     """
     Decodificar e validar token JWT.
@@ -98,7 +140,9 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         
         # Verificar se o token não expirou
         exp = payload.get("exp")
-        if exp and datetime.now(timezone.utc) > datetime.fromtimestamp(exp, tz=timezone.utc):
+        if exp and datetime.now(timezone.utc) > datetime.fromtimestamp(
+            exp, tz=timezone.utc
+        ):
             return None
             
         return payload
@@ -108,6 +152,7 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     except jwt.JWTError:
         return None
 
+  
 def get_token_user_id(token: str) -> Optional[int]:
     """
     Obter ID do usuário do token.
@@ -123,6 +168,7 @@ def get_token_user_id(token: str) -> Optional[int]:
         return payload.get("user_id")
     return None
 
+  
 def get_token_username(token: str) -> Optional[str]:
     """
     Obter username do token.
@@ -138,6 +184,7 @@ def get_token_username(token: str) -> Optional[str]:
         return payload.get("username")
     return None
 
+  
 def is_token_valid(token: str) -> bool:
     """
     Verificar se token é válido.
@@ -154,7 +201,10 @@ def is_token_valid(token: str) -> bool:
 # FUNÇÕES AUXILIARES
 # =======================================
 
-def generate_user_token(user_id: int, username: str, email: str, perfil: str) -> str:
+  
+def generate_user_token(
+    user_id: int, username: str, email: str, perfil: str
+) -> str:
     """
     Gerar token para usuário específico.
     
@@ -176,6 +226,7 @@ def generate_user_token(user_id: int, username: str, email: str, perfil: str) ->
     
     return create_access_token(token_data)
 
+  
 def refresh_token(token: str) -> Optional[str]:
     """
     Renovar token se ainda válido.
@@ -200,6 +251,7 @@ def refresh_token(token: str) -> Optional[str]:
 # VALIDAÇÕES DE SENHA
 # =======================================
 
+  
 def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     Validar força da senha.

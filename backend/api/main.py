@@ -12,7 +12,10 @@ Data: 29/10/2025
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
+import logging
 import logging
 
 # Configurar logging
@@ -21,31 +24,6 @@ logger = logging.getLogger(__name__)
 
 # Configuração de segurança
 security = HTTPBearer()
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Gerenciamento do ciclo de vida da aplicação"""
-    logger.info("🚀 Iniciando Sistema ERP Primotex...")
-    logger.info("📊 Conectando ao banco de dados...")
-    
-    # Inicializar o banco de dados
-    try:
-        from backend.database.config import engine
-        from backend.models import create_all_tables
-        
-        # Criar todas as tabelas
-        success = create_all_tables(engine)
-        if success:
-            logger.info("✅ Banco de dados inicializado com sucesso!")
-        else:
-            logger.error("❌ Erro ao inicializar banco de dados")
-    
-    except Exception as e:
-        logger.error(f"❌ Erro crítico no banco de dados: {e}")
-    
-    yield
-    
-    logger.info("🔄 Finalizando Sistema ERP Primotex...")
 
 # Criar instância FastAPI
 app = FastAPI(
@@ -69,9 +47,24 @@ app = FastAPI(
     contact={
         "name": "Primotex - Forros e Divisórias Eireli",
         "email": "contato@primotex.com.br",
-    },
-    lifespan=lifespan
+    }
 )
+
+# Evento de startup para inicializar banco de dados
+@app.on_event("startup")
+async def startup_event():
+    logger.info("🚀 Iniciando Sistema ERP Primotex...")
+    logger.info("📊 Conectando ao banco de dados...")
+    try:
+        from backend.database.config import engine
+        from backend.models import create_all_tables
+        success = create_all_tables(engine)
+        if success:
+            logger.info("✅ Banco de dados inicializado com sucesso!")
+        else:
+            logger.error("❌ Erro ao inicializar banco de dados")
+    except Exception as e:
+        logger.error(f"❌ Erro crítico no banco de dados: {e}")
 
 # Configurar CORS para permitir acesso do frontend
 app.add_middleware(
@@ -118,18 +111,21 @@ async def root():
 @app.get("/health", tags=["Sistema"])
 async def health_check():
     """Verificação de saúde do sistema"""
-    return {
-        "status": "healthy",
-        "timestamp": "2025-10-29T00:00:00Z",
-        "database": "connected",  # Será implementado
-        "services": {
-            "auth": "active",
-            "cadastros": "active",
-            "os": "active",
-            "financeiro": "active",
-            "estoque": "active"
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": "2025-10-29T00:00:00Z",
+            "database": "connected",  # Será implementado
+            "services": {
+                "auth": "active",
+                "cadastros": "active",
+                "os": "active",
+                "financeiro": "active",
+                "estoque": "active"
+            }
         }
-    }
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 # =======================================
 # MIDDLEWARE DE AUTENTICAÇÃO (FUTURO)
@@ -178,7 +174,7 @@ app.include_router(financeiro_router, tags=["Financeiro"])
 
 # Incluir router de comunicação (NOVO - Fase 3)
 from backend.api.routers.comunicacao_router import router as comunicacao_router
-app.include_router(comunicacao_router, tags=["Comunicação"])
+app.include_router(comunicacao_router, prefix="/api/v1", tags=["Comunicação"])
 
 # =======================================
 # ENDPOINTS MOCK PARA DESENVOLVIMENTO
@@ -231,6 +227,5 @@ async def resumo_financeiro():
         "contas_vencidas": 3
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+# Removi o bloco if __name__ == "__main__" que estava causando conflito
+# Para executar o servidor, use: uvicorn backend.api.main:app --host 127.0.0.1 --port 8002

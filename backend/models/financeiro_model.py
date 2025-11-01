@@ -57,6 +57,7 @@ class ContaReceber(Base):
     # Status e controle
     status = Column(String(30), default="Pendente")  # Pendente, Pago, Vencido, Cancelado, Renegociado
     situacao = Column(String(30), default="Normal")  # Normal, Vencido, Negociação, Jurídico
+    ativo = Column(Boolean, default=True, nullable=False)  # Campo para soft delete
     
     # Formas de pagamento
     forma_pagamento_prevista = Column(String(50))  # Dinheiro, PIX, Cartão, Boleto
@@ -136,6 +137,7 @@ class ContaPagar(Base):
     # Status e controle
     status = Column(String(30), default="Pendente")  # Pendente, Pago, Vencido, Cancelado, Renegociado
     prioridade = Column(String(20), default="Normal")  # Baixa, Normal, Alta, Urgente
+    ativo = Column(Boolean, default=True, nullable=False)  # Campo para soft delete
     
     # Formas de pagamento
     forma_pagamento_prevista = Column(String(50))  # Dinheiro, PIX, Transferência, Cheque
@@ -317,7 +319,7 @@ class CategoriaFinanceira(Base):
     caminho = Column(String(500))  # Path completo da categoria
     
     # Configurações
-    ativa = Column(Boolean, default=True)
+    ativo = Column(Boolean, default=True)
     cor = Column(String(7), default="#3498db")  # Cor hexadecimal
     icone = Column(String(50))  # Nome do ícone
     

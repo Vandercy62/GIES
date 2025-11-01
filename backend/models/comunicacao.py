@@ -256,27 +256,8 @@ class ComunicacaoEstatisticas(Base):
     atualizado_em = Column(DateTime(timezone=True), onupdate=func.now())
 
 # Adicionar relacionamento ao modelo Cliente
-def add_comunicacao_relationship():
-    """
-    Adiciona relacionamento de comunicação ao modelo Cliente
-    """
-    try:
-        from backend.models.cliente import Cliente
-        if not hasattr(Cliente, 'comunicacoes'):
-            Cliente.comunicacoes = relationship("ComunicacaoHistorico", back_populates="cliente")
-    except ImportError:
-        pass
-
-# =======================================
-# CONSTANTES PARA IMPORTAÇÃO
-# =======================================
-
-# Exportar enums como constantes para facilitar uso
 TIPOS_COMUNICACAO = TipoComunicacao
 STATUS_ENVIO = StatusComunicacao
 TIPOS_TEMPLATE = TipoTemplate
 PRIORIDADE_ENVIO = PrioridadeEnvio
 CANAIS_COMUNICACAO = TipoComunicacao
-
-# Executar quando o módulo for importado
-add_comunicacao_relationship()

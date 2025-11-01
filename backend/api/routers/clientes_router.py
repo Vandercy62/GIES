@@ -1,3 +1,4 @@
+
 """
 SISTEMA ERP PRIMOTEX - ROTAS DE CLIENTES
 ========================================
@@ -47,9 +48,10 @@ Data: 29/10/2025
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime, date
 from backend.database.config import get_database
 from backend.models.cliente_model import Cliente, STATUS_CLIENTE, TIPOS_PESSOA
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, ConfigDict
 import re
 
 # =======================================
@@ -80,6 +82,8 @@ class ClienteBase(BaseModel):
     
     # Dados básicos opcionais
     rg_ie: Optional[str] = None
+    data_nascimento_fundacao: Optional[date] = None
+    foto_path: Optional[str] = None
     status: str = "Ativo"
     origem: Optional[str] = None
     tipo_cliente: Optional[str] = None
@@ -99,9 +103,26 @@ class ClienteBase(BaseModel):
     telefone_whatsapp: Optional[str] = None
     email_principal: Optional[str] = None
     email_secundario: Optional[str] = None
+    site: Optional[str] = None
+    redes_sociais: Optional[str] = None
+    contatos_adicionais: Optional[str] = None
     
-    # Observações
+    # Dados financeiros
+    banco_nome: Optional[str] = None
+    banco_agencia: Optional[str] = None
+    banco_conta: Optional[str] = None
+    limite_credito: Optional[float] = None
+    dia_vencimento_preferencial: Optional[int] = None
+    
+    # Observações e dados adicionais
     observacoes_gerais: Optional[str] = None
+    historico_interacoes: Optional[str] = None
+    anexos_paths: Optional[str] = None
+    tags_categorias: Optional[str] = None
+    
+    # Campos de controle
+    usuario_criacao_id: Optional[int] = None
+    usuario_atualizacao_id: Optional[int] = None
     
     @validator('tipo_pessoa')
     def validar_tipo_pessoa(cls, v):
@@ -121,12 +142,10 @@ class ClienteBase(BaseModel):
     def validar_cpf_cnpj(cls, v):
         """Validação básica de CPF/CNPJ"""
         # Remove caracteres não numéricos
-        apenas_numeros = re.sub(r'[^0-9]', '', v)
-        
+        apenas_numeros = re.sub(r'\D', '', v)
         # Verifica tamanho (CPF = 11, CNPJ = 14)
         if len(apenas_numeros) not in [11, 14]:
             raise ValueError('CPF deve ter 11 dígitos, CNPJ deve ter 14 dígitos')
-        
         return apenas_numeros
 
 class ClienteCreate(ClienteBase):
@@ -140,14 +159,21 @@ class ClienteUpdate(ClienteBase):
     nome: Optional[str] = None
     cpf_cnpj: Optional[str] = None
 
+
 class ClienteResponse(ClienteBase):
     """Modelo de resposta (inclui campos do banco)"""
-    id: int
-    data_criacao: Optional[str] = None
-    data_atualizacao: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
     
-    class Config:
-        from_attributes = True
+    id: int
+    data_criacao: Optional[datetime] = None
+    data_atualizacao: Optional[datetime] = None
+
+
+class ClientesListagemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    total: int
+    clientes: List[ClienteResponse]
 
 # =======================================
 # FUNÇÕES AUXILIARES
@@ -200,7 +226,7 @@ def verificar_cpf_cnpj_unico(db: Session, cpf_cnpj: str, cliente_id: Optional[in
 # ROTA 1: LISTAR TODOS OS CLIENTES
 # =======================================
 
-@router.get("/", response_model=List[ClienteResponse])
+@router.get("/", response_model=ClientesListagemResponse)
 async def listar_clientes(
     page: int = Query(1, ge=1, description="Número da página"),
     limit: int = Query(50, ge=1, le=100, description="Itens por página"),
@@ -240,9 +266,16 @@ async def listar_clientes(
     
     # Executar query com paginação
     clientes = query.offset(offset).limit(limit).all()
-    
-    # Converter para formato de resposta
-    return clientes
+
+    # Contar total de clientes (com os filtros aplicados)
+    total = query.count()
+
+    # Converter explicitamente para ClienteResponse
+    clientes_response = [ClienteResponse.model_validate(c) for c in clientes]
+    return {
+        "total": total,
+        "clientes": clientes_response
+    }
 
 # =======================================
 # ROTA 2: BUSCAR CLIENTE ESPECÍFICO
@@ -324,18 +357,17 @@ async def criar_cliente(
         )
     
     # Criar objeto Cliente
-    novo_cliente = Cliente(**cliente_data.dict())
-    
-    # Adicionar ao banco
     try:
+        novo_cliente = Cliente(**cliente_data.dict())
         db.add(novo_cliente)
         db.commit()
         db.refresh(novo_cliente)
-        
         return novo_cliente
-        
     except Exception as e:
+        import traceback
         db.rollback()
+        print("[ERRO AO CRIAR CLIENTE]")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao criar cliente: {str(e)}"

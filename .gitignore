@@ -136,3 +136,30 @@ relatorios_gerados/
 
 # Arquivos de configuração local
 config_local.json
+
+# =====================================
+# Arquivos de Desenvolvimento/Debug
+# =====================================
+# Scripts de teste e debug
+test_*.py
+teste_*.py
+debug_*.py
+diagnostico.*
+investigacao_*.py
+verificacao_*.py
+
+# Scripts de inicialização específicos
+start_*.bat
+start_*.ps1
+rodar_*.ps1
+iniciar_*.ps1
+recriar_*.ps1
+executar_*.ps1
+
+# Chaves de criptografia
+*.key
+encryption.key
+secret_key.txt
+
+# Ambientes virtuais específicos
+.venv311/

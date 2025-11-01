@@ -23,23 +23,56 @@ from datetime import datetime, date, timedelta
 from typing import Dict, Any, Optional, List
 import json
 import time
+import sys
+import os
+
+# Adicionar diretório raiz ao path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Constantes da UI centralizadas
-from ui_constants import (
-    COLORS, FONT_STYLES, MODULE_TITLES, ACTION_MESSAGES, 
-    PERFORMANCE, MOUSE_EVENTS, ICONS
-)
+try:
+    from ui_constants import (
+        COLORS, FONT_STYLES, MODULE_TITLES, ACTION_MESSAGES, 
+        PERFORMANCE
+    )
+except ImportError:
+    # Fallback se ui_constants não estiver disponível
+    COLORS = {
+        'primary': '#2c3e50',
+        'secondary': '#3498db',
+        'success': '#27ae60',
+        'warning': '#f39c12',
+        'danger': '#e74c3c',
+        'light': '#ecf0f1',
+        'dark': '#34495e'
+    }
+    FONT_STYLES = {'default': ('Segoe UI', 10)}
+    MODULE_TITLES = {}
+    ACTION_MESSAGES = {}
+    PERFORMANCE = {}
 
-# Sistemas de performance
-from shared.cache_system import erp_cache
-from shared.lazy_loading import erp_loader
-from shared.database_optimizer import DatabaseOptimizer
+# Sistemas de performance (opcionais)
+try:
+    from shared.cache_system import erp_cache
+    from shared.lazy_loading import erp_loader
+    PERFORMANCE_ENABLED = True
+except ImportError:
+    erp_cache = None
+    erp_loader = None
+    PERFORMANCE_ENABLED = False
 
 # Constantes locais para evitar dependências externas
 API_BASE_URL = "http://127.0.0.1:8002"
-API_TIMEOUT = PERFORMANCE['api_timeout']
-CACHE_TIMEOUT = PERFORMANCE['cache_timeout']
-REFRESH_INTERVAL = PERFORMANCE['refresh_interval']
+
+# Configurações padrão se PERFORMANCE não estiver disponível
+try:
+    API_TIMEOUT = PERFORMANCE['api_timeout']
+    CACHE_TIMEOUT_CONFIG = PERFORMANCE['cache_timeout']
+    REFRESH_INTERVAL_CONFIG = PERFORMANCE['refresh_interval']
+except (NameError, KeyError):
+    API_TIMEOUT = 10
+    CACHE_TIMEOUT_CONFIG = 30
+    REFRESH_INTERVAL_CONFIG = 5000
 
 # =======================================
 # CONFIGURAÇÕES

@@ -17,7 +17,7 @@ import os
 # Adicionar o diretório raiz ao path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-BASE_URL = "http://127.0.0.1:8001"
+BASE_URL = "http://127.0.0.1:8002"
 
 def test_health_check():
     """Testar endpoint de saúde"""
@@ -28,7 +28,7 @@ def test_health_check():
         if response.status_code == 200:
             data = response.json()
             print(f"   ✅ Status: {data.get('status')}")
-            print(f"   📊 Database: {data.get('database', {}).get('connected')}")
+            print(f"   📊 Database: {data.get('database')}")
             return True
         else:
             print(f"   ❌ Erro: {response.status_code}")
@@ -135,15 +135,18 @@ def test_client_endpoints(token):
             f"{BASE_URL}/api/v1/clientes",
             headers=headers
         )
-        
+
         if response.status_code == 200:
             data = response.json()
-            total = data.get("total", 0)
-            clientes = data.get("clientes", [])
-            
-            print(f"   ✅ Listagem funcionando: {total} clientes")
-            print(f"   📊 Paginação: {len(clientes)} registros retornados")
-            return True
+            if isinstance(data, dict) and "total" in data and "clientes" in data:
+                total = data["total"]
+                clientes = data["clientes"]
+                print(f"   ✅ Listagem funcionando: {total} clientes")
+                print(f"   📊 Paginação: {len(clientes)} registros retornados")
+                return True
+            else:
+                print(f"   ❌ Resposta inesperada: {data}")
+                return False
         else:
             print(f"   ❌ Erro na listagem: {response.status_code}")
             return False

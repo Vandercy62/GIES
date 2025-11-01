@@ -41,6 +41,29 @@ except ImportError:
         return logging.getLogger(name)
 
 class BackupManager:
+    def get_backup_info(self, backup_file: str) -> dict:
+        """Obter informações detalhadas de um backup específico"""
+        registry_file = Path(self.backup_dir) / "backup_registry.json"
+        if not registry_file.exists():
+            return {}
+        try:
+            with open(registry_file, 'r', encoding='utf-8') as f:
+                registry = json.load(f)
+            for backup in registry["backups"]:
+                if backup["filename"] == backup_file:
+                    return backup
+            return {}
+        except Exception as e:
+            self.logger.error(f"Erro ao obter info do backup: {e}")
+            return {}
+
+    def get_total_backup_size(self) -> dict:
+        """Obter o tamanho total dos backups em MB e quantidade"""
+        usage = self._get_backup_disk_usage()
+        return {
+            "total_size_mb": usage["total_size_mb"],
+            "backup_count": usage["backup_count"]
+        }
     """Gerenciador de backups do sistema"""
     
     def __init__(self, config_manager=None):

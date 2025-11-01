@@ -1,3 +1,22 @@
+fastapi>=0.100.0,<0.101.0
+uvicorn==0.24.0
+sqlalchemy==1.4.48
+pydantic>=2.1.0,<3.0.0
+pydantic[email]
+python-dotenv
+PyJWT
+passlib
+structlog
+requests
+alembic
+email-validator
+jinja2
+python-multipart
+python-barcode[images]
+reportlab
+httpx
+pytest
+pytest-asyncio
 # ============================================
 # SISTEMA ERP PRIMOTEX - DEPENDÊNCIAS PYTHON
 # ============================================
@@ -7,26 +26,16 @@
 # =====================================
 
 # Framework web moderno e rápido
-fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
 # Banco de dados e ORM
-sqlalchemy==2.0.23
 alembic==1.12.1
-psycopg2-binary==2.9.9
 
 # Autenticação e segurança
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
-# =====================================
-# FRONTEND DESKTOP - PyQt6
-# =====================================
-
-# Interface gráfica moderna
-PyQt6==6.6.0
-PyQt6-tools==6.6.0
 
 # =====================================
 # GERAÇÃO DE DOCUMENTOS E RELATÓRIOS
@@ -50,7 +59,7 @@ pyzbar==0.1.9
 qrcode[pil]==7.4.2
 
 # Manipulação de imagens
-Pillow==10.1.0
+Pillow==11.3.0
 opencv-python==4.8.1.78
 
 # =====================================
@@ -78,8 +87,6 @@ redis==5.0.1
 
 # Configurações e variáveis de ambiente
 python-decouple==3.8
-pydantic==2.5.0
-pydantic-settings==2.1.0
 
 # Datas e horários
 python-dateutil==2.8.2

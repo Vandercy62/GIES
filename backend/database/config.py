@@ -79,7 +79,14 @@ def get_database() -> Generator:
     Usado nos endpoints FastAPI.
     (Alias para get_db para compatibilidade)
     """
-    return get_db()
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
 
 # =======================================
 # FUNÇÕES AUXILIARES

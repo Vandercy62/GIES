@@ -24,7 +24,7 @@ class OrdemServicoItemSchema(BaseModel):
     descricao: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class OrdemServicoHistoricoSchema(BaseModel):
     id: Optional[int]
@@ -35,7 +35,7 @@ class OrdemServicoHistoricoSchema(BaseModel):
     observacao: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class OrdemServicoBase(BaseModel):
     cliente_id: int
@@ -65,4 +65,4 @@ class OrdemServicoSchema(OrdemServicoBase):
     historico: List[OrdemServicoHistoricoSchema] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
