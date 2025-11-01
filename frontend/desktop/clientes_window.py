@@ -10,7 +10,7 @@ Data: 29/10/2025
 """
 
 # Constantes da UI centralizadas
-from ui_constants import KEYBOARD_EVENTS, PERSON_TYPES
+from frontend.desktop.ui_constants import KEYBOARD_EVENTS, PERSON_TYPES
 
 import tkinter as tk
 from tkinter import ttk, messagebox

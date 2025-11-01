@@ -29,7 +29,6 @@ from backend.auth.dependencies import get_current_user, require_operator
 from backend.models.ordem_servico_model import (
     OrdemServico, FaseOS, FASES_OS, STATUS_OS
 )
-from backend.models.os_model import OSHistorico
 from backend.schemas.ordem_servico_schemas import (
     # Create schemas
     OrdemServicoCreate, MudancaFaseRequest,
@@ -114,16 +113,16 @@ async def criar_ordem_servico(
         
         db.add(fase_abertura)
         
-        # Criar histórico
-        historico = OSHistorico(
-            ordem_servico_id=db_os.id,
-            fase_anterior=None,
-            fase_nova=1,
-            usuario_id=current_user["id"],
-            observacoes="OS criada - Fase 1 Abertura"
-        )
+        # Criar histórico (temporariamente comentado)
+        # historico = OSHistorico(
+        #     ordem_servico_id=db_os.id,
+        #     fase_anterior=None,
+        #     fase_nova=1,
+        #     usuario_id=current_user["id"],
+        #     observacoes="OS criada - Fase 1 Abertura"
+        # )
         
-        db.add(historico)
+        # db.add(historico)
         db.commit()
         db.refresh(db_os)
         
@@ -425,16 +424,16 @@ async def mudar_fase_os(
                 fase_anterior_obj.status = "CONCLUIDA"
                 fase_anterior_obj.data_conclusao = datetime.now()
         
-        # Criar histórico
-        historico = OSHistorico(
-            ordem_servico_id=os_id,
-            fase_anterior=fase_anterior,
-            fase_nova=nova_fase,
-            usuario_id=current_user["id"],
-            observacoes=mudanca.observacoes or f"Mudança da fase {fase_anterior} para {nova_fase}"
-        )
+        # Criar histórico (temporariamente comentado)
+        # historico = OSHistorico(
+        #     ordem_servico_id=os_id,
+        #     fase_anterior=fase_anterior,
+        #     fase_nova=nova_fase,
+        #     usuario_id=current_user["id"],
+        #     observacoes=mudanca.observacoes or f"Mudança da fase {fase_anterior} para {nova_fase}"
+        # )
         
-        db.add(historico)
+        # db.add(historico)  # Comentado temporariamente
         db.commit()
         db.refresh(os_obj)
         
@@ -521,11 +520,12 @@ async def obter_historico_os(
                 detail=ERRO_OS_NAO_ENCONTRADA
             )
         
-        historico = db.query(OSHistorico).filter(
-            OSHistorico.ordem_servico_id == os_id
-        ).order_by(OSHistorico.created_at.desc()).all()
+        # Temporariamente retornando lista vazia (OSHistorico comentado)
+        # historico = db.query(OSHistorico).filter(
+        #     OSHistorico.ordem_servico_id == os_id
+        # ).order_by(OSHistorico.created_at.desc()).all()
         
-        return historico
+        return []  # Lista vazia temporária
         
     except HTTPException:
         raise

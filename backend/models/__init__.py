@@ -47,6 +47,30 @@ from .produto_model import (
     UNIDADES_MEDIDA
 )
 
+# Modelo de fornecedores
+from .fornecedor_model import (
+    Fornecedor,
+    CATEGORIAS_FORNECEDOR,
+    TIPOS_FORNECEDOR,
+    STATUS_FORNECEDOR,
+    PORTES_EMPRESA
+)
+
+# Modelo de colaboradores
+from .colaborador_model import (
+    Colaborador,
+    Departamento,
+    Cargo,
+    ColaboradorDocumento,
+    AvaliacaoDesempenho,
+    PontoEletronico,
+    PeriodoFerias,
+    TipoContrato,
+    StatusColaborador,
+    NivelEscolaridade,
+    TipoDocumento
+)
+
 # Modelos de ordem de serviço (Fase 3)
 from .ordem_servico_model import (
     OrdemServico,
@@ -107,8 +131,16 @@ from .comunicacao import (
 # Esta lista é usada para criar todas as tabelas
 ALL_MODELS = [
     Usuario,
-    Cliente, 
+    Cliente,
     Produto,
+    Fornecedor,
+    Colaborador,
+    Departamento,
+    Cargo,
+    ColaboradorDocumento,
+    AvaliacaoDesempenho,
+    PontoEletronico,
+    PeriodoFerias,
     OrdemServico,
     FaseOS,
     VisitaTecnica,

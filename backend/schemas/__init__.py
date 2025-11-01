@@ -60,6 +60,56 @@ from .ordem_servico_schemas import (
     DashboardOS,
 )
 
+# Schemas de Fornecedores
+from .fornecedor_schemas import (
+    # Enums
+    TipoFornecedor,
+    StatusFornecedor,
+    CategoriaFornecedor,
+    PorteEmpresa,
+    
+    # Schemas principais
+    FornecedorBase,
+    FornecedorCreate,
+    FornecedorUpdate,
+    FornecedorResponse,
+    
+    # Schemas de listagem
+    FornecedorFilter,
+    FornecedorListItem,
+    FornecedorListResponse,
+    
+    # Schemas especiais
+    FornecedorResumo,
+    EstatisticasFornecedor
+)
+
+# Schemas de Colaboradores
+from .colaborador_schemas import (
+    # Schemas principais
+    ColaboradorBase,
+    ColaboradorCreate,
+    ColaboradorUpdate,
+    ColaboradorResponse,
+    ColaboradorDetalhado,
+    ColaboradorListagem,
+    
+    # Schemas de filtros
+    ColaboradorFiltros,
+    PaginationParams,
+    
+    # Schemas auxiliares
+    DepartamentoBase,
+    DepartamentoCreate,
+    DepartamentoResponse,
+    CargoBase,
+    CargoCreate,
+    CargoResponse,
+    
+    # Schemas de estatísticas
+    EstatisticasColaboradores
+)
+
 __all__ = [
     # Enums
     "StatusOS",

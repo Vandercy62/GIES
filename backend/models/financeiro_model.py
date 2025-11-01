@@ -105,8 +105,18 @@ class ContaPagar(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Relacionamentos
-    fornecedor_id = Column(Integer, nullable=True)  # ForeignKey("fornecedores.id") - Tabela ainda não criada
-    ordem_servico_id = Column(Integer, ForeignKey("ordens_servico.id"), nullable=True)
+    fornecedor_id = Column(
+        Integer,
+        ForeignKey("fornecedores.id"),
+        nullable=True,
+        comment="ID do fornecedor"
+    )
+    ordem_servico_id = Column(
+        Integer,
+        ForeignKey("ordens_servico.id"),
+        nullable=True,
+        comment="ID da ordem de serviço relacionada"
+    )
     
     # Dados básicos
     numero_documento = Column(String(50), unique=True, nullable=False, index=True)

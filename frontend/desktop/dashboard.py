@@ -282,7 +282,9 @@ class DashboardWindow:
         buttons = [
             ("📊 Dashboard", self.show_dashboard, "#3498db"),
             ("👥 Clientes", self.show_clients, "#2ecc71"),
-            ("📦 Produtos", self.show_products, "#f39c12"),
+            ("🏭 Fornecedores", self.show_fornecedores, "#27ae60"),
+            ("� Colaboradores", self.show_colaboradores, "#34495e"),
+            ("�📦 Produtos", self.show_products, "#f39c12"),
             ("📦 Estoque", self.show_estoque, "#e67e22"),
             ("🏷️ Códigos de Barras", self.show_codigo_barras, "#8e44ad"),
             (MODULE_TITLES['ordem_servico'], self.show_orders, "#9b59b6"),
@@ -1245,6 +1247,75 @@ class DashboardWindow:
             messagebox.showerror(
                 "Erro",
                 f"Erro ao abrir clientes:\n{str(e)}"
+            )
+    
+    def show_fornecedores(self):
+        """Mostrar módulo de fornecedores"""
+        
+        # Registrar navegação
+        if hasattr(self, 'nav_system'):
+            self.nav_system.navigate_to('fornecedores', 'Fornecedores', {}, self.show_fornecedores)
+        
+        try:
+            # Usar lazy loading para carregar o módulo
+            def create_fornecedores_module():
+                from fornecedores_window import FornecedoresWindow
+                return FornecedoresWindow
+            
+            # Registrar factory se não existe
+            if not erp_loader.is_registered('fornecedores'):
+                erp_loader.register_factory('fornecedores', create_fornecedores_module)
+            
+            # Carregar módulo lazy
+            fornecedores_class = erp_loader.get_module('fornecedores')
+            fornecedores_class(self.root, self.user_data.get('access_token'))
+            
+        except ImportError as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao carregar módulo de fornecedores: {e}"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao abrir fornecedores:\n{str(e)}"
+            )
+    
+    def show_colaboradores(self):
+        """Mostrar módulo de colaboradores"""
+        
+        # Registrar navegação
+        if hasattr(self, 'nav_system'):
+            self.nav_system.navigate_to('colaboradores', 'Colaboradores', {}, self.show_colaboradores)
+        
+        try:
+            # Usar lazy loading para carregar o módulo
+            def create_colaboradores_module():
+                from colaboradores_window import ColaboradoresWindow
+                return ColaboradoresWindow
+            
+            # Registrar factory se não existe
+            if erp_loader and not erp_loader.is_registered('colaboradores'):
+                erp_loader.register_factory('colaboradores', create_colaboradores_module)
+            
+            # Carregar módulo lazy
+            if erp_loader:
+                colaboradores_class = erp_loader.get_module('colaboradores')
+            else:
+                from colaboradores_window import ColaboradoresWindow
+                colaboradores_class = ColaboradoresWindow
+                
+            colaboradores_class(self.root, self.user_data.get('access_token'))
+            
+        except ImportError as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao carregar módulo de colaboradores: {e}"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Erro ao abrir colaboradores:\n{str(e)}"
             )
     
     def show_products(self):

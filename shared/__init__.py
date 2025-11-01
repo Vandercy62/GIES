@@ -44,5 +44,5 @@ try:
     ]
     
 except ImportError as e:
-    print(f"⚠️  Aviso: Nem todos os módulos estão disponíveis: {e}")
+    print(f"⚠ Aviso: Nem todos os módulos estão disponíveis: {e}")
     __all__ = []

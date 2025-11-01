@@ -17,7 +17,7 @@ from datetime import datetime
 class ClienteBase(BaseModel):
     """Schema base para clientes"""
     nome: str = Field(..., min_length=2, max_length=150)
-    tipo_pessoa: str = Field(..., regex="^(fisica|juridica)$")
+    tipo_pessoa: str = Field(..., pattern="^(fisica|juridica)$")
     cpf_cnpj: Optional[str] = Field(None, max_length=18)
     email: Optional[EmailStr] = None
     telefone: Optional[str] = Field(None, max_length=20)
@@ -40,7 +40,7 @@ class ClienteCreate(ClienteBase):
 class ClienteUpdate(BaseModel):
     """Schema para atualização de cliente"""
     nome: Optional[str] = Field(None, min_length=2, max_length=150)
-    tipo_pessoa: Optional[str] = Field(None, regex="^(fisica|juridica)$")
+    tipo_pessoa: Optional[str] = Field(None, pattern="^(fisica|juridica)$")
     cpf_cnpj: Optional[str] = Field(None, max_length=18)
     email: Optional[EmailStr] = None
     telefone: Optional[str] = Field(None, max_length=20)

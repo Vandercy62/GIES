@@ -43,6 +43,7 @@ from backend.models.financeiro_model import (
     ContaReceber, ContaPagar, MovimentacaoFinanceira,
     CategoriaFinanceira, FluxoCaixa
 )
+from backend.models.user_model import Usuario
 
 # Imports dos models relacionados
 # from backend.models.ordem_servico_model import OrdemServico
@@ -50,10 +51,7 @@ from backend.models.financeiro_model import (
 
 # Imports de dependências
 from backend.database.config import get_db
-
-# Mock function para autenticação (temporário)
-def get_current_user():
-    return {"id": 1, "username": "admin", "email": "admin@test.com"}
+from backend.auth.dependencies import get_current_user
 
 # Configuração do router
 router = APIRouter(

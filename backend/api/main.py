@@ -154,6 +154,8 @@ async def get_user_info(current_user: dict = Depends(get_current_user)):
 from backend.api.routers.auth_router import router as auth_router
 from backend.api.routers.cliente_router import router as cliente_router
 from backend.api.routers.produto_router import router as produto_router
+from backend.api.routers.fornecedor_router import router as fornecedor_router
+from backend.api.routers.colaborador_router import router as colaborador_router
 from backend.api.routers.agendamento_router import router as agendamento_router
 from backend.api.routers.financeiro_router import router as financeiro_router
 from backend.api.routers.os_router import router as os_router
@@ -166,6 +168,12 @@ app.include_router(cliente_router, prefix="/api/v1", tags=["Clientes"])
 
 # Incluir router de produtos
 app.include_router(produto_router, prefix="/api/v1", tags=["Produtos"])
+
+# Incluir router de fornecedores (NOVO)
+app.include_router(fornecedor_router, prefix="/api/v1", tags=["Fornecedores"])
+
+# Incluir router de colaboradores (NOVO)
+app.include_router(colaborador_router, prefix="/api/v1", tags=["Colaboradores"])
 
 # Incluir router de OS (Ordem de Serviço) - NOVO - Fase 3
 app.include_router(os_router, prefix="/api/v1", tags=["Ordem de Serviço"])

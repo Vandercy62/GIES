@@ -129,10 +129,10 @@ class LogManager:
             audit_logger.setLevel(logging.INFO)
             audit_logger.propagate = False
             
-            print("✅ Sistema de logs configurado com sucesso!")
+            print("✓ Sistema de logs configurado com sucesso!")
             
         except Exception as e:
-            print(f"❌ Erro ao configurar logs: {e}")
+            print(f"X Erro ao configurar logs: {e}")
             traceback.print_exc()
     
     def _get_config(self, key: str, default: Any) -> Any:
