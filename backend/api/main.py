@@ -151,17 +151,21 @@ async def get_user_info(current_user: dict = Depends(get_current_user)):
 # INCLUIR ROUTERS DOS MÓDULOS
 # =======================================
 
-from backend.api.routers.clientes_router import router as clientes_router
 from backend.api.routers.auth_router import router as auth_router
+from backend.api.routers.cliente_router import router as cliente_router
+from backend.api.routers.produto_router import router as produto_router
 from backend.api.routers.agendamento_router import router as agendamento_router
-from backend.api.routers.financeiro_router_simples import router as financeiro_router
+from backend.api.routers.financeiro_router import router as financeiro_router
 from backend.api.routers.os_router import router as os_router
 
 # Incluir router de autenticação
 app.include_router(auth_router, prefix="/api/v1", tags=["Autenticação"])
 
 # Incluir router de clientes
-app.include_router(clientes_router, prefix="/api/v1", tags=["Clientes"])
+app.include_router(cliente_router, prefix="/api/v1", tags=["Clientes"])
+
+# Incluir router de produtos
+app.include_router(produto_router, prefix="/api/v1", tags=["Produtos"])
 
 # Incluir router de OS (Ordem de Serviço) - NOVO - Fase 3
 app.include_router(os_router, prefix="/api/v1", tags=["Ordem de Serviço"])

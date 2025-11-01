@@ -29,6 +29,7 @@ from backend.auth.dependencies import get_current_user, require_operator
 from backend.models.ordem_servico_model import (
     OrdemServico, FaseOS, FASES_OS, STATUS_OS
 )
+from backend.models.os_model import OSHistorico
 from backend.schemas.ordem_servico_schemas import (
     # Create schemas
     OrdemServicoCreate, MudancaFaseRequest,

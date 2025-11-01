@@ -163,3 +163,4 @@ secret_key.txt
 
 # Ambientes virtuais específicos
 .venv311/
+node_modules

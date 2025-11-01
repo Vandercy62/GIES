@@ -1,0 +1,401 @@
+# 🚀 Mobile CD Pipeline - PRIMOTEX ERP
+# Build e deploy automático para desenvolvimento e produção
+
+name: Mobile CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/mobile/**'
+      - '.github/workflows/mobile-cd.yml'
+    tags:
+      - 'mobile-v*'
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.environment || 'auto' }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: ./frontend/mobile
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  EXPO_APPLE_PASSWORD: ${{ secrets.EXPO_APPLE_PASSWORD }}
+
+jobs:
+  # 🔍 Determine deployment strategy
+  setup:
+    name: 🔍 Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      should-deploy: ${{ steps.determine-env.outputs.should-deploy }}
+      platform: ${{ steps.determine-env.outputs.platform }}
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🎯 Determine environment
+        id: determine-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "platform=${{ inputs.platform }}" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/mobile-v* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📋 Extract version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/mobile-v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/mobile-v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(date +'%Y.%m.%d')-${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+          fi
+
+  # 🧪 Pre-deploy validation
+  validate:
+    name: 🧪 Pre-deploy Validation
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.should-deploy == 'true'
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: 🎯 Setup Expo CLI
+        run: npm install -g @expo/cli eas-cli
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run tests
+        run: npm test -- --coverage --watchAll=false --passWithNoTests
+
+      - name: 🔧 Validate Expo config
+        run: npx expo doctor
+
+      - name: ✅ Pre-deployment checks passed
+        run: echo "🎉 All pre-deployment validations passed!"
+
+  # 📱 Build iOS
+  build-ios:
+    name: 📱 Build iOS
+    runs-on: macos-latest
+    needs: [setup, validate]
+    if: needs.setup.outputs.should-deploy == 'true' && (needs.setup.outputs.platform == 'all' || needs.setup.outputs.platform == 'ios')
+    timeout-minutes: 45
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: 🎯 Setup Expo and EAS
+        run: |
+          npm install -g @expo/cli eas-cli
+          eas login
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔧 Configure app version
+        run: |
+          # Update app.json with version info
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.version = '${{ needs.setup.outputs.version }}';
+            app.expo.ios.buildNumber = '${{ github.run_number }}';
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+          "
+
+      - name: 🏗️ Build iOS app
+        run: |
+          if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
+            eas build --platform ios --profile production --non-interactive --no-wait
+          else
+            eas build --platform ios --profile preview --non-interactive --no-wait
+          fi
+
+      - name: 📊 Build summary
+        run: |
+          echo "## 📱 iOS Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Build started successfully" >> $GITHUB_STEP_SUMMARY
+
+  # 🤖 Build Android
+  build-android:
+    name: 🤖 Build Android
+    runs-on: ubuntu-latest
+    needs: [setup, validate]
+    if: needs.setup.outputs.should-deploy == 'true' && (needs.setup.outputs.platform == 'all' || needs.setup.outputs.platform == 'android')
+    timeout-minutes: 45
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🎯 Setup Expo and EAS
+        run: |
+          npm install -g @expo/cli eas-cli
+          eas login
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔧 Configure app version
+        run: |
+          # Update app.json with version info
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.version = '${{ needs.setup.outputs.version }}';
+            app.expo.android.versionCode = ${{ github.run_number }};
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+          "
+
+      - name: 🏗️ Build Android app
+        run: |
+          if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
+            eas build --platform android --profile production --non-interactive --no-wait
+          else
+            eas build --platform android --profile preview --non-interactive --no-wait
+          fi
+
+      - name: 📊 Build summary
+        run: |
+          echo "## 🤖 Android Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Code**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Build started successfully" >> $GITHUB_STEP_SUMMARY
+
+  # 🔄 OTA Updates
+  ota-update:
+    name: 🔄 OTA Update
+    runs-on: ubuntu-latest
+    needs: [setup, validate]
+    if: needs.setup.outputs.should-deploy == 'true' && needs.setup.outputs.environment != 'production'
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: 🎯 Setup Expo and EAS
+        run: |
+          npm install -g @expo/cli eas-cli
+          eas login
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔄 Publish OTA update
+        run: |
+          BRANCH="${{ needs.setup.outputs.environment }}"
+          MESSAGE="Update from commit ${GITHUB_SHA:0:7} - ${{ github.event.head_commit.message }}"
+          
+          eas update --branch $BRANCH --message "$MESSAGE" --non-interactive
+
+      - name: 📊 OTA Summary
+        run: |
+          echo "## 🔄 OTA Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${GITHUB_SHA:0:7}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Message**: ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ OTA update published" >> $GITHUB_STEP_SUMMARY
+
+  # 🏪 Deploy to stores (production only)
+  deploy-stores:
+    name: 🏪 Deploy to Stores
+    runs-on: ubuntu-latest
+    needs: [setup, validate, build-ios, build-android]
+    if: needs.setup.outputs.environment == 'production' && startsWith(github.ref, 'refs/tags/mobile-v')
+    timeout-minutes: 30
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/mobile/package-lock.json
+
+      - name: 🎯 Setup Expo and EAS
+        run: |
+          npm install -g @expo/cli eas-cli
+          eas login
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🍎 Submit to App Store
+        if: needs.setup.outputs.platform == 'all' || needs.setup.outputs.platform == 'ios'
+        run: |
+          echo "🍎 Submitting to App Store..."
+          eas submit --platform ios --latest --non-interactive
+
+      - name: 🤖 Submit to Google Play
+        if: needs.setup.outputs.platform == 'all' || needs.setup.outputs.platform == 'android'
+        run: |
+          echo "🤖 Submitting to Google Play..."
+          eas submit --platform android --latest --track internal --non-interactive
+
+      - name: 📊 Store deployment summary
+        run: |
+          echo "## 🏪 Store Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **iOS**: ✅ Submitted to App Store" >> $GITHUB_STEP_SUMMARY
+          echo "- **Android**: ✅ Submitted to Google Play (Internal Track)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: 🎉 Production deployment completed!" >> $GITHUB_STEP_SUMMARY
+
+  # 📊 Deployment summary
+  deployment-summary:
+    name: 📊 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [setup, validate, build-ios, build-android, ota-update, deploy-stores]
+    if: always() && needs.setup.outputs.should-deploy == 'true'
+    
+    steps:
+      - name: 📊 Generate deployment report
+        run: |
+          echo "# 🚀 PRIMOTEX Mobile Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: ${{ needs.setup.outputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${GITHUB_SHA:0:7}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Validation | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📱 iOS Build | ${{ needs.build-ios.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🤖 Android Build | ${{ needs.build-android.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔄 OTA Update | ${{ needs.ota-update.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏪 Store Deploy | ${{ needs.deploy-stores.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.validate.result }}" == "success" ]]; then
+            echo "✅ **Deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📱 Next Steps:" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ needs.setup.outputs.environment }}" == "production" ]]; then
+              echo "- Monitor app store review process" >> $GITHUB_STEP_SUMMARY
+              echo "- Check crash reporting and analytics" >> $GITHUB_STEP_SUMMARY
+              echo "- Prepare release notes for users" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Test the preview build thoroughly" >> $GITHUB_STEP_SUMMARY
+              echo "- Validate OTA updates are working" >> $GITHUB_STEP_SUMMARY
+              echo "- Share build with QA team" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ **Deployment failed.** Please check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 💬 Notify team
+        if: needs.setup.outputs.environment == 'production'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const title = `🚀 Mobile App v${{ needs.setup.outputs.version }} Deployed to Production`;
+            const body = `The PRIMOTEX ERP Mobile app has been successfully deployed to production!
+            
+            **📱 Deployment Details:**
+            - Version: ${{ needs.setup.outputs.version }}
+            - Platform: ${{ needs.setup.outputs.platform }}
+            - Commit: ${context.sha.substring(0, 7)}
+            - Build: #${{ github.run_number }}
+            
+            **🏪 Store Status:**
+            - iOS: Submitted to App Store
+            - Android: Submitted to Google Play (Internal Track)
+            
+            The app should be available for review within 24-48 hours.`;
+            
+            // Create issue for tracking
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['deployment', 'mobile', 'production']
+            });
