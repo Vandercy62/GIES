@@ -15,7 +15,7 @@ from typing import Optional, List, Dict, Any
 from enum import Enum
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, validator, root_validator
 from pydantic.config import ConfigDict
 
 
@@ -94,7 +94,7 @@ class ContaReceberBase(BaseModel):
     ordem_servico_id: Optional[int] = Field(None, description="ID da OS relacionada")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
-    @field_validator('valor_total')
+    @validator('valor_total')
     @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
@@ -102,7 +102,7 @@ class ContaReceberBase(BaseModel):
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
     
-    @field_validator('descricao')
+    @validator('descricao')
     @classmethod
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
@@ -122,7 +122,7 @@ class ContaPagarBase(BaseModel):
     categoria_id: Optional[int] = Field(None, description=ID_CATEGORIA_DESC)
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
-    @field_validator('valor_total')
+    @validator('valor_total')
     @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
@@ -130,7 +130,7 @@ class ContaPagarBase(BaseModel):
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
     
-    @field_validator('fornecedor', 'descricao')
+    @validator('fornecedor', 'descricao')
     @classmethod
     def validar_textos(cls, v: str) -> str:
         """Valida e formata textos"""
@@ -153,7 +153,7 @@ class MovimentacaoFinanceiraBase(BaseModel):
     conta_pagar_id: Optional[int] = Field(None, description="ID da conta a pagar")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
-    @field_validator('valor')
+    @validator('valor')
     @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
@@ -161,7 +161,7 @@ class MovimentacaoFinanceiraBase(BaseModel):
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
     
-    @field_validator('descricao')
+    @validator('descricao')
     @classmethod
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
@@ -181,7 +181,7 @@ class CategoriaFinanceiraBase(BaseModel):
     descricao: Optional[str] = Field(None, max_length=200, description="Descrição da categoria")
     ativo: bool = Field(default=True, description="Se a categoria está ativa")
     
-    @field_validator('nome')
+    @validator('nome')
     @classmethod
     def validar_nome(cls, v: str) -> str:
         """Valida e formata nome"""
@@ -440,7 +440,7 @@ class FluxoCaixaRequest(BaseModel):
     incluir_previsoes: bool = Field(default=True, description="Incluir previsões futuras")
     categorias: Optional[List[int]] = Field(None, description="IDs das categorias")
     
-    @field_validator('data_fim')
+    @validator('data_fim')
     @classmethod
     def validar_periodo(cls, v: date, info) -> date:
         """Valida se data fim é posterior ao início"""
@@ -495,7 +495,7 @@ class PagamentoRequest(BaseModel):
     forma_pagamento: FormaPagamento = Field(..., description="Forma de pagamento")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
-    @field_validator('valor_pago')
+    @validator('valor_pago')
     @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""

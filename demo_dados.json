@@ -1,0 +1,79 @@
+{
+  "sistema": "ERP Primotex",
+  "versao": "3.0.0",
+  "status": "Funcionando",
+  "ultima_atualizacao": "2025-11-01T23:18:36.808876",
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "João Silva",
+      "email": "joao@email.com",
+      "telefone": "(11) 99999-9999",
+      "endereco": "Rua das Flores, 123"
+    },
+    {
+      "id": 2,
+      "nome": "Maria Santos",
+      "email": "maria@email.com",
+      "telefone": "(11) 88888-8888",
+      "endereco": "Av. Central, 456"
+    },
+    {
+      "id": 3,
+      "nome": "Carlos Oliveira",
+      "email": "carlos@email.com",
+      "telefone": "(11) 77777-7777",
+      "endereco": "Praça da Liberdade, 789"
+    }
+  ],
+  "produtos": [
+    {
+      "id": 1,
+      "nome": "Forro PVC Branco",
+      "preco": 25.5,
+      "estoque": 150,
+      "categoria": "Forros",
+      "codigo": "FPV001"
+    },
+    {
+      "id": 2,
+      "nome": "Divisória Eucatex",
+      "preco": 180.0,
+      "estoque": 75,
+      "categoria": "Divisórias",
+      "codigo": "DEU002"
+    },
+    {
+      "id": 3,
+      "nome": "Perfil Alumínio",
+      "preco": 12.3,
+      "estoque": 200,
+      "categoria": "Estruturas",
+      "codigo": "PAL003"
+    }
+  ],
+  "recepcao": [
+    {
+      "id": 1,
+      "visitante": "Ana Costa",
+      "empresa": "Construções ABC",
+      "motivo": "Orçamento para obra",
+      "data_hora": "2024-11-01T09:30:00",
+      "status": "Atendido"
+    },
+    {
+      "id": 2,
+      "visitante": "Pedro Lima",
+      "empresa": "Reforma Fácil",
+      "motivo": "Entrega de materiais",
+      "data_hora": "2024-11-01T14:15:00",
+      "status": "Aguardando"
+    }
+  ],
+  "financeiro": {
+    "contas_receber": 15000.0,
+    "contas_pagar": 8500.0,
+    "saldo_caixa": 6500.0,
+    "valor_estoque": 28575.0
+  }
+}

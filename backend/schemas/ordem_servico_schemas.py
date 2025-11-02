@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, validator, root_validator
 from pydantic import EmailStr
 
 
@@ -107,7 +107,7 @@ class OrdemServicoBase(BaseModel):
     requer_orcamento: bool = Field(True, description="Se requer orçamento formal")
     urgente: bool = Field(False, description="Se é urgente")
     
-    @field_validator('cep_servico')
+    @validator('cep_servico')
     @classmethod
     def validar_cep(cls, v):
         """Remove formatação do CEP"""
@@ -115,11 +115,10 @@ class OrdemServicoBase(BaseModel):
             return v.replace('-', '').replace(' ', '')
         return v
     
-    @field_validator('data_prazo')
+    @validator('data_prazo')
     @classmethod
-    def validar_prazo(cls, v, info):
+    def validar_prazo(cls, v, values):
         """Valida se o prazo é posterior à solicitação"""
-        values = info.data if hasattr(info, 'data') else {}
         if v and 'data_solicitacao' in values and v < values['data_solicitacao']:
             raise ValueError('Data do prazo deve ser posterior à solicitação')
         return v
@@ -388,7 +387,7 @@ class ItemOrcamentoBase(BaseModel):
     categoria: Optional[str] = Field(None, max_length=50, description="Categoria do item")
     observacoes_item: Optional[str] = Field(None, max_length=200)
     
-    @model_validator(mode='before')
+    @root_validator(pre=True)
     @classmethod
     def validar_valor_total(cls, values):
         """Valida se o valor total está correto"""
@@ -434,16 +433,15 @@ class OrcamentoBase(BaseModel):
     observacoes_gerais: Optional[str] = Field(None, max_length=1000)
     termos_condicoes: Optional[str] = Field(None, max_length=2000)
     
-    @field_validator('data_validade')
+    @validator('data_validade')
     @classmethod
-    def validar_validade(cls, v, info):
+    def validar_validade(cls, v, values):
         """Valida se a data de validade é futura"""
-        values = info.data if hasattr(info, 'data') else {}
         if v and 'data_elaboracao' in values and v <= values['data_elaboracao']:
             raise ValueError('Data de validade deve ser posterior à elaboração')
         return v
     
-    @model_validator(mode='before')
+    @root_validator(pre=True)
     @classmethod
     def validar_valores(cls, values):
         """Valida os valores do orçamento"""

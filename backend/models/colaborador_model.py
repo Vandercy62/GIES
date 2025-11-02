@@ -33,7 +33,7 @@ from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Date, Text, 
     DECIMAL, ForeignKey, Enum as SQLEnum
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, remote
 from sqlalchemy.sql import func
 from datetime import datetime, date
 import enum
@@ -111,8 +111,15 @@ class Departamento(Base):
     data_criacao = Column(DateTime, default=func.now())
     
     # Relacionamentos
-    colaboradores = relationship("Colaborador", back_populates="departamento")
-    responsavel = relationship("Colaborador", remote_side="Colaborador.id")
+    colaboradores = relationship(
+        "Colaborador", 
+        back_populates="departamento", 
+        primaryjoin="Departamento.id == Colaborador.departamento_id"
+    )
+    responsavel = relationship(
+        "Colaborador", 
+        primaryjoin="Departamento.responsavel_id == Colaborador.id"
+    )
     
     def __str__(self):
         return f"{self.codigo} - {self.nome}" if self.codigo else self.nome
@@ -243,14 +250,14 @@ class Colaborador(Base):
     # Relacionamentos
     usuario = relationship("Usuario", foreign_keys=[user_id])
     cargo = relationship("Cargo", back_populates="colaboradores")
-    departamento = relationship("Departamento", back_populates="colaboradores")
-    superior_direto = relationship("Colaborador", remote_side=[id])
-    subordinados = relationship("Colaborador", remote_side=[superior_direto_id])
+    departamento = relationship(
+        "Departamento", 
+        primaryjoin="Colaborador.departamento_id == Departamento.id"
+    )
     
     # Relacionamentos com tabelas dependentes
     documentos = relationship("ColaboradorDocumento", back_populates="colaborador")
     historico_profissional = relationship("HistoricoProfissional", back_populates="colaborador")
-    avaliacoes = relationship("AvaliacaoDesempenho", back_populates="colaborador")
     pontos = relationship("PontoEletronico", back_populates="colaborador")
     ferias = relationship("PeriodoFerias", back_populates="colaborador")
     
@@ -422,9 +429,7 @@ class AvaliacaoDesempenho(Base):
     data_avaliacao = Column(DateTime, default=func.now())
     status = Column(String(20), default="Pendente")  # Pendente, Concluída, Cancelada
     
-    # Relacionamentos
-    colaborador = relationship("Colaborador", back_populates="avaliacoes")
-    avaliador = relationship("Colaborador", foreign_keys=[avaliador_id])
+    # Relacionamentos removidos para evitar ambiguidade
 
 
 class PontoEletronico(Base):

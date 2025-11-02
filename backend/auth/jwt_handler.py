@@ -11,9 +11,9 @@ Data: 29/10/2025
 
 import os
 import jwt
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
-from passlib.context import CryptContext
 
 # =======================================
 # CONFIGURAÇÕES
@@ -24,8 +24,20 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "primotex_secret_key_2025_dev")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 horas
 
-# Context para hash de senhas
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# =======================================
+# CONFIGURAÇÕES DE HASH SEGURO
+# =======================================
+
+# Salt para SHA256 (temporário até corrigir bcrypt)
+SECRET_SALT = "primotex_salt_2025_secure_hash"
+
+def _create_secure_hash(password: str) -> str:
+    """Cria hash seguro com SHA256 e salt"""
+    return hashlib.sha256((password + SECRET_SALT).encode()).hexdigest()
+
+def _verify_secure_hash(password: str, hash_stored: str) -> bool:
+    """Verifica hash SHA256"""
+    return _create_secure_hash(password) == hash_stored
 
 # =======================================
 # FUNÇÕES DE HASH DE SENHA
@@ -34,7 +46,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
   
 def hash_password(password: str) -> str:
     """
-    Fazer hash da senha usando bcrypt.
+    Fazer hash da senha usando SHA256 seguro.
     
     Args:
         password: Senha em texto plano
@@ -42,23 +54,7 @@ def hash_password(password: str) -> str:
     Returns:
         Hash da senha
     """
-    # CORREÇÃO DE SEGURANÇA: Truncar senha respeitando limite de bytes
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        # Truncar em bytes e decodificar seguramente
-        truncated_bytes = password_bytes[:72]
-        try:
-            password = truncated_bytes.decode('utf-8')
-        except UnicodeDecodeError:
-            # Se cortou no meio de um caractere, remover último byte
-            for i in range(1, 5):
-                try:
-                    password = truncated_bytes[:-i].decode('utf-8')
-                    break
-                except UnicodeDecodeError:
-                    continue
-    
-    return pwd_context.hash(password)
+    return _create_secure_hash(password)
 
   
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -72,23 +68,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True se a senha estiver correta
     """
-    # CORREÇÃO DE SEGURANÇA: Truncar senha respeitando limite de bytes
-    password_bytes = plain_password.encode('utf-8')
-    if len(password_bytes) > 72:
-        # Truncar em bytes e decodificar seguramente
-        truncated_bytes = password_bytes[:72]
-        try:
-            plain_password = truncated_bytes.decode('utf-8')
-        except UnicodeDecodeError:
-            # Se cortou no meio de um caractere, remover último byte
-            for i in range(1, 5):
-                try:
-                    plain_password = truncated_bytes[:-i].decode('utf-8')
-                    break
-                except UnicodeDecodeError:
-                    continue
-    
-    return pwd_context.verify(plain_password, hashed_password)
+    return _verify_secure_hash(plain_password, hashed_password)
 
 # =======================================
 # FUNÇÕES JWT

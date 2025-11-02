@@ -13,7 +13,7 @@ from datetime import datetime, date, time
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, validator, root_validator
 from pydantic.config import ConfigDict
 
 
@@ -85,7 +85,7 @@ class AgendamentoBase(BaseModel):
     ordem_servico_id: Optional[int] = Field(None, description="ID da OS relacionada")
     observacoes: Optional[str] = Field(None, max_length=500, description="Observações adicionais")
     
-    @field_validator('data_agendamento')
+    @validator('data_agendamento')
     @classmethod
     def validar_data_futura(cls, v: datetime) -> datetime:
         """Valida se a data é futura (exceto para admins)"""
@@ -94,7 +94,7 @@ class AgendamentoBase(BaseModel):
             pass
         return v
     
-    @field_validator('titulo')
+    @validator('titulo')
     @classmethod
     def validar_titulo(cls, v: str) -> str:
         """Valida e formata título"""
@@ -116,7 +116,7 @@ class ConfiguracaoAgendaBase(BaseModel):
     antecedencia_minima: int = Field(default=60, ge=0, le=2880, description="Antecedência mínima para agendamento (minutos)")
     permite_fins_semana: bool = Field(default=False, description="Permite agendamentos em fins de semana")
     
-    @field_validator('horario_fim')
+    @validator('horario_fim')
     @classmethod
     def validar_horarios(cls, v: time, info) -> time:
         """Valida se horário fim é posterior ao início"""
@@ -124,7 +124,7 @@ class ConfiguracaoAgendaBase(BaseModel):
             raise ValueError("Horário de fim deve ser posterior ao de início")
         return v
     
-    @field_validator('dias_trabalho')
+    @validator('dias_trabalho')
     @classmethod
     def validar_dias_trabalho(cls, v: List[DiaSemana]) -> List[DiaSemana]:
         """Valida dias de trabalho"""
@@ -141,7 +141,7 @@ class DisponibilidadeUsuarioBase(BaseModel):
     disponivel: bool = Field(..., description="Se está disponível ou não")
     motivo: Optional[str] = Field(None, max_length=200, description="Motivo da indisponibilidade")
     
-    @field_validator('data_fim')
+    @validator('data_fim')
     @classmethod
     def validar_periodo(cls, v: datetime, info) -> datetime:
         """Valida se data fim é posterior ao início"""
@@ -149,7 +149,7 @@ class DisponibilidadeUsuarioBase(BaseModel):
             raise ValueError("Data fim deve ser posterior à data início")
         return v
     
-    @model_validator(mode='after')
+    @root_validator(pre=False)
     def validar_motivo_indisponibilidade(self) -> 'DisponibilidadeUsuarioBase':
         """Valida motivo para indisponibilidades"""
         if not self.disponivel and not self.motivo:
@@ -167,7 +167,7 @@ class BloqueioAgendaBase(BaseModel):
     afeta_todos_usuarios: bool = Field(default=False, description="Se afeta todos os usuários")
     usuarios_afetados: Optional[List[int]] = Field(None, description="IDs dos usuários afetados")
     
-    @field_validator('data_fim')
+    @validator('data_fim')
     @classmethod
     def validar_periodo_bloqueio(cls, v: datetime, info) -> datetime:
         """Valida período do bloqueio"""
@@ -175,7 +175,7 @@ class BloqueioAgendaBase(BaseModel):
             raise ValueError("Data fim deve ser posterior à data início")
         return v
     
-    @model_validator(mode='after')
+    @root_validator(pre=False)
     def validar_usuarios_bloqueio(self) -> 'BloqueioAgendaBase':
         """Valida usuários afetados pelo bloqueio"""
         if not self.afeta_todos_usuarios and not self.usuarios_afetados:
