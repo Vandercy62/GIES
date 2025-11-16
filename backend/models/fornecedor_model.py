@@ -24,7 +24,7 @@ Data: 01/11/2025
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text, Numeric, Index
 )
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, text
 from backend.database.config import Base
 
 # =======================================
@@ -45,9 +45,15 @@ CATEGORIAS_FORNECEDOR = [
     "Outros"
 ]
 
+# =============================================================================
+# CONSTANTES
+# =============================================================================
+
+PESSOA_JURIDICA = "Pessoa Jurídica"
+
 TIPOS_FORNECEDOR = [
     "Pessoa Física",
-    "Pessoa Jurídica"
+    PESSOA_JURIDICA
 ]
 
 STATUS_FORNECEDOR = [
@@ -69,6 +75,8 @@ PORTES_EMPRESA = [
 # =======================================
 # MODELO FORNECEDOR
 # =======================================
+
+
 
 class Fornecedor(Base):
     """
@@ -122,7 +130,7 @@ class Fornecedor(Base):
     tipo_pessoa = Column(
         String(20),
         nullable=False,
-        default="Pessoa Jurídica",
+        default=PESSOA_JURIDICA,
         comment="Pessoa Física ou Pessoa Jurídica"
     )
     
@@ -400,7 +408,7 @@ class Fornecedor(Base):
     data_cadastro = Column(
         DateTime(timezone=True),
         nullable=False,
-        server_default=func.now(),
+        server_default=text("(datetime('now'))"),
         comment="Data de cadastro do fornecedor"
     )
     
@@ -408,7 +416,7 @@ class Fornecedor(Base):
     data_atualizacao = Column(
         DateTime(timezone=True),
         nullable=True,
-        onupdate=func.now(),
+        onupdate=func.now,
         comment="Data da última atualização"
     )
     
@@ -523,7 +531,7 @@ class Fornecedor(Base):
     
     def is_pessoa_juridica(self):
         """Verifica se é pessoa jurídica"""
-        return self.tipo_pessoa == "Pessoa Jurídica"
+        return self.tipo_pessoa == PESSOA_JURIDICA
     
     def get_contato_completo(self):
         """Retorna informações de contato formatadas"""

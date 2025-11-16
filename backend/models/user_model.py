@@ -20,8 +20,7 @@ Autor: GitHub Copilot
 Data: 29/10/2025
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, text
 from backend.database.config import Base
 
 class Usuario(Base):
@@ -98,7 +97,7 @@ class Usuario(Base):
     # Campo DATA_CRIACAO - Quando foi criado automaticamente
     data_criacao = Column(
         DateTime(timezone=True),    # Data e hora com fuso horário
-        server_default=func.now(),  # Valor automático = agora
+        server_default=text('CURRENT_TIMESTAMP'),  # Valor automático = agora
         nullable=False,             # Obrigatório
         comment="Data e hora de criação do usuário"
     )
@@ -106,7 +105,7 @@ class Usuario(Base):
     # Campo ULTIMA_ATIVIDADE - Último acesso
     ultima_atividade = Column(
         DateTime(timezone=True),    # Data e hora com fuso horário
-        onupdate=func.now(),        # Atualiza automaticamente
+        onupdate=text('CURRENT_TIMESTAMP'),  # Atualiza automaticamente
         comment="Data e hora do último acesso"
     )
     
@@ -139,8 +138,8 @@ class Usuario(Base):
             "nome_completo": self.nome_completo,
             "perfil": self.perfil,
             "ativo": self.ativo,
-            "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None,
-            "ultima_atividade": self.ultima_atividade.isoformat() if self.ultima_atividade else None,
+            "data_criacao": self.data_criacao.isoformat() if getattr(self, "data_criacao", None) else None,
+            "ultima_atividade": self.ultima_atividade.isoformat() if getattr(self, "ultima_atividade", None) else None,
             "observacoes": self.observacoes
         }
     

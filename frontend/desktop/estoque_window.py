@@ -16,6 +16,14 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 import requests
 
+# Importar middleware de autenticação
+from frontend.desktop.auth_middleware import (
+    require_login,
+    get_token_for_api,
+    create_auth_header,
+    get_current_user_info
+)
+
 # =======================================
 # CONFIGURAÇÕES
 # =======================================
@@ -26,12 +34,14 @@ API_BASE_URL = "http://127.0.0.1:8002"
 # CLASSE CONTROLE DE ESTOQUE
 # =======================================
 
+@require_login()
 class EstoqueWindow:
     """Sistema de controle de estoque"""
     
-    def __init__(self, user_data: Dict[str, Any], parent_window=None):
-        self.user_data = user_data
-        self.token = user_data.get("access_token")
+    def __init__(self, parent_window=None):
+        # NÃO recebe mais user_data - usa SessionManager
+        self.token = get_token_for_api()
+        self.user_data = get_current_user_info()
         self.parent_window = parent_window
         
         self.root = tk.Toplevel() if parent_window else tk.Tk()

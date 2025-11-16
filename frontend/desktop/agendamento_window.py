@@ -33,17 +33,26 @@ from shared.constants import (
     MSG_FUNCIONALIDADE_EM_DESENVOLVIMENTO
 )
 
+# Importar middleware de autenticação
+from frontend.desktop.auth_middleware import (
+    require_login,
+    get_token_for_api,
+    create_auth_header,
+    get_current_user_info
+)
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@require_login()
 class AgendamentoWindow:
     """Interface principal para gestão de Agendamento"""
     
     def __init__(self, parent=None):
         self.parent = parent
         self.api_base_url = "http://127.0.0.1:8002/api/v1"
-        self.token = None
+        self.token = get_token_for_api()  # Pega token da sessão global
         
         # Dados do agendamento
         self.evento_atual = None

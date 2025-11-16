@@ -95,7 +95,6 @@ class ContaReceberBase(BaseModel):
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
     @validator('valor_total')
-    @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
@@ -103,7 +102,6 @@ class ContaReceberBase(BaseModel):
         return v
     
     @validator('descricao')
-    @classmethod
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
         if v:
@@ -123,7 +121,6 @@ class ContaPagarBase(BaseModel):
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
     @validator('valor_total')
-    @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
@@ -131,7 +128,6 @@ class ContaPagarBase(BaseModel):
         return v
     
     @validator('fornecedor', 'descricao')
-    @classmethod
     def validar_textos(cls, v: str) -> str:
         """Valida e formata textos"""
         if v:
@@ -154,7 +150,6 @@ class MovimentacaoFinanceiraBase(BaseModel):
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
     @validator('valor')
-    @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
@@ -162,7 +157,6 @@ class MovimentacaoFinanceiraBase(BaseModel):
         return v
     
     @validator('descricao')
-    @classmethod
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
         if v:
@@ -182,7 +176,6 @@ class CategoriaFinanceiraBase(BaseModel):
     ativo: bool = Field(default=True, description="Se a categoria está ativa")
     
     @validator('nome')
-    @classmethod
     def validar_nome(cls, v: str) -> str:
         """Valida e formata nome"""
         if v:
@@ -441,10 +434,9 @@ class FluxoCaixaRequest(BaseModel):
     categorias: Optional[List[int]] = Field(None, description="IDs das categorias")
     
     @validator('data_fim')
-    @classmethod
-    def validar_periodo(cls, v: date, info) -> date:
+    def validar_periodo(cls, v: date, values) -> date:
         """Valida se data fim é posterior ao início"""
-        if 'data_inicio' in info.data and v < info.data['data_inicio']:
+        if 'data_inicio' in values and v < values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
     
@@ -496,7 +488,6 @@ class PagamentoRequest(BaseModel):
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
     
     @validator('valor_pago')
-    @classmethod
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:

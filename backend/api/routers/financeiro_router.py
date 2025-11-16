@@ -137,8 +137,8 @@ async def listar_contas_receber(
         query = db.query(ContaReceber).filter(ContaReceber.ativo == True)
         
         # Aplicar filtros
-        if status:
-            query = query.filter(ContaReceber.status == status)
+        if status_filtro:
+            query = query.filter(ContaReceber.status == status_filtro)
         
         if cliente_id:
             query = query.filter(ContaReceber.cliente_id == cliente_id)
@@ -178,7 +178,7 @@ async def criar_conta_receber(
     """Cria nova conta a receber"""
     try:
         # Validações
-        if conta.valor_original <= 0:
+        if conta.valor_total <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
@@ -294,9 +294,9 @@ async def excluir_conta_receber(
             )
         
         # Soft delete
-        db_conta.ativo = False
-        db_conta.data_atualizacao = datetime.now()
-        db_conta.usuario_atualizacao_id = current_user.id
+        setattr(db_conta, 'ativo', False)
+        setattr(db_conta, 'data_atualizacao', datetime.now())
+        setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
         
         db.commit()
         
@@ -341,17 +341,17 @@ async def baixar_conta_receber(
             )
         
         # Atualizar conta
-        db_conta.valor_pago = valor_pago
-        db_conta.data_pagamento = data_pagamento
-        db_conta.forma_pagamento = forma_pagamento
-        db_conta.observacoes_pagamento = observacoes
-        db_conta.status = StatusFinanceiro.PAGO
-        db_conta.data_atualizacao = datetime.now()
-        db_conta.usuario_atualizacao_id = current_user.id
+        setattr(db_conta, 'valor_pago', valor_pago)
+        setattr(db_conta, 'data_pagamento', data_pagamento)
+        setattr(db_conta, 'forma_pagamento', forma_pagamento)
+        setattr(db_conta, 'observacoes_pagamento', observacoes)
+        setattr(db_conta, 'status', StatusFinanceiro.PAGO)
+        setattr(db_conta, 'data_atualizacao', datetime.now())
+        setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
         
         # Criar movimentação financeira
         movimentacao = MovimentacaoFinanceira(
-            tipo=TipoMovimentacao.ENTRADA,
+            tipo=TipoMovimentacao.RECEITA,
             valor=valor_pago,
             descricao=f"Recebimento - {db_conta.descricao}",
             data_movimentacao=data_pagamento,
@@ -395,8 +395,8 @@ async def listar_contas_pagar(
         query = db.query(ContaPagar).filter(ContaPagar.ativo == True)
         
         # Aplicar filtros
-        if status:
-            query = query.filter(ContaPagar.status == status)
+        if status_filtro:
+            query = query.filter(ContaPagar.status == status_filtro)
         
         if fornecedor:
             query = query.filter(ContaPagar.fornecedor.ilike(f"%{fornecedor}%"))
@@ -436,7 +436,7 @@ async def criar_conta_pagar(
     """Cria nova conta a pagar"""
     try:
         # Validações
-        if conta.valor_original <= 0:
+        if conta.valor_total <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
@@ -543,9 +543,9 @@ async def excluir_conta_pagar(
             )
         
         # Soft delete
-        db_conta.ativo = False
-        db_conta.data_atualizacao = datetime.now()
-        db_conta.usuario_atualizacao_id = current_user.id
+        setattr(db_conta, 'ativo', False)
+        setattr(db_conta, 'data_atualizacao', datetime.now())
+        setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
         
         db.commit()
         
@@ -590,17 +590,17 @@ async def pagar_conta_pagar(
             )
         
         # Atualizar conta
-        db_conta.valor_pago = valor_pago
-        db_conta.data_pagamento = data_pagamento
-        db_conta.forma_pagamento = forma_pagamento
-        db_conta.observacoes_pagamento = observacoes
-        db_conta.status = StatusFinanceiro.PAGO
-        db_conta.data_atualizacao = datetime.now()
-        db_conta.usuario_atualizacao_id = current_user.id
+        setattr(db_conta, 'valor_pago', valor_pago)
+        setattr(db_conta, 'data_pagamento', data_pagamento)
+        setattr(db_conta, 'forma_pagamento', forma_pagamento)
+        setattr(db_conta, 'observacoes_pagamento', observacoes)
+        setattr(db_conta, 'status', StatusFinanceiro.PAGO)
+        setattr(db_conta, 'data_atualizacao', datetime.now())
+        setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
         
         # Criar movimentação financeira
         movimentacao = MovimentacaoFinanceira(
-            tipo=TipoMovimentacao.SAIDA,
+            tipo=TipoMovimentacao.DESPESA,
             valor=valor_pago,
             descricao=f"Pagamento - {db_conta.descricao}",
             data_movimentacao=data_pagamento,

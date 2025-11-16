@@ -11,11 +11,20 @@ Criado em: 29/10/2025
 Autor: GitHub Copilot
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON
+from decimal import Decimal
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON, text
 from sqlalchemy.types import DECIMAL
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from backend.database.config import Base
+
+
+# =============================================================================
+# CONSTANTES
+# =============================================================================
+
+CASCADE_DELETE_ORPHAN = "all, delete-orphan"
+ORDENS_SERVICO_ID_FK = "ordens_servico.id"
+
 
 
 class OrdemServico(Base):
@@ -40,11 +49,11 @@ class OrdemServico(Base):
     prioridade = Column(String(20), default="Normal")  # Baixa, Normal, Alta, Urgente
     
     # Status e controle de fases
-    status_fase = Column(Integer, default=1, nullable=False)  # 1-7 (7 fases)
-    status_geral = Column(String(30), default="Aberta", nullable=False)  # Aberta, Em Andamento, Concluída, Cancelada
+    fase_atual = Column(Integer, default=1, nullable=False)  # 1-7 (7 fases) - ALINHADO COM SCHEMA
+    status = Column(String(30), default="ABERTA", nullable=False)  # ABERTA, EM_EXECUCAO, FINALIZADA, etc - ALINHADO COM SCHEMA
     
     # Datas importantes
-    data_abertura = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    data_abertura = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'), nullable=False)
     data_prevista_conclusao = Column(DateTime(timezone=True))
     data_conclusao = Column(DateTime(timezone=True))
     prazo_orcamento = Column(DateTime(timezone=True))
@@ -76,19 +85,19 @@ class OrdemServico(Base):
     comentario_avaliacao = Column(Text)
     
     # Metadados
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(DateTime(timezone=True), onupdate=text('CURRENT_TIMESTAMP'))
     
     # Relacionamentos
     cliente = relationship("Cliente", back_populates="ordens_servico")
-    fases = relationship("FaseOS", back_populates="ordem_servico", cascade="all, delete-orphan")
-    visitas_tecnicas = relationship("VisitaTecnica", back_populates="ordem_servico", cascade="all, delete-orphan")
-    orcamentos = relationship("Orcamento", back_populates="ordem_servico", cascade="all, delete-orphan")
-    agendamentos = relationship("Agendamento", back_populates="ordem_servico", cascade="all, delete-orphan")
-    contas_receber = relationship("ContaReceber", back_populates="ordem_servico", cascade="all, delete-orphan")
+    fases = relationship("FaseOS", back_populates="ordem_servico", cascade=CASCADE_DELETE_ORPHAN)
+    visitas_tecnicas = relationship("VisitaTecnica", back_populates="ordem_servico", cascade=CASCADE_DELETE_ORPHAN)
+    orcamentos = relationship("Orcamento", back_populates="ordem_servico", cascade=CASCADE_DELETE_ORPHAN)
+    agendamentos = relationship("Agendamento", back_populates="ordem_servico", cascade=CASCADE_DELETE_ORPHAN)
+    contas_receber = relationship("ContaReceber", back_populates="ordem_servico", cascade=CASCADE_DELETE_ORPHAN)
     
     def __repr__(self):
-        return f"<OrdemServico(numero_os='{self.numero_os}', cliente_id={self.cliente_id}, status_fase={self.status_fase})>"
+        return f"<OrdemServico(numero_os='{self.numero_os}', cliente_id={self.cliente_id}, fase_atual={self.fase_atual}, status='{self.status}')>"
 
 
 class FaseOS(Base):
@@ -104,7 +113,7 @@ class FaseOS(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Relacionamento com OS
-    ordem_servico_id = Column(Integer, ForeignKey("ordens_servico.id"), nullable=False)
+    ordem_servico_id = Column(Integer, ForeignKey(ORDENS_SERVICO_ID_FK), nullable=False)
     
     # Dados da fase
     numero_fase = Column(Integer, nullable=False)  # 1-7
@@ -137,8 +146,8 @@ class FaseOS(Base):
     assinatura_cliente = Column(Text)  # Base64 da assinatura
     
     # Metadados
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(DateTime(timezone=True), onupdate=text('CURRENT_TIMESTAMP'))
     
     # Relacionamento
     ordem_servico = relationship("OrdemServico", back_populates="fases")
@@ -160,7 +169,7 @@ class VisitaTecnica(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Relacionamento com OS
-    ordem_servico_id = Column(Integer, ForeignKey("ordens_servico.id"), nullable=False)
+    ordem_servico_id = Column(Integer, ForeignKey(ORDENS_SERVICO_ID_FK), nullable=False)
     
     # Dados da visita
     numero_visita = Column(Integer, default=1)  # Pode haver várias visitas por OS
@@ -204,8 +213,8 @@ class VisitaTecnica(Base):
     data_assinatura = Column(DateTime(timezone=True))
     
     # Metadados
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(DateTime(timezone=True), onupdate=text('CURRENT_TIMESTAMP'))
     
     # Relacionamento
     ordem_servico = relationship("OrdemServico", back_populates="visitas_tecnicas")
@@ -227,7 +236,7 @@ class Orcamento(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Relacionamento com OS
-    ordem_servico_id = Column(Integer, ForeignKey("ordens_servico.id"), nullable=False)
+    ordem_servico_id = Column(Integer, ForeignKey(ORDENS_SERVICO_ID_FK), nullable=False)
     
     # Dados do orçamento
     numero_orcamento = Column(String(20), unique=True, nullable=False, index=True)
@@ -235,7 +244,7 @@ class Orcamento(Base):
     tipo_orcamento = Column(String(50), default="Padrão")  # Padrão, Simplificado, Detalhado
     
     # Validade e status
-    data_criacao = Column(DateTime(timezone=True), server_default=func.now())
+    data_criacao = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
     data_envio = Column(DateTime(timezone=True))
     data_validade = Column(DateTime(timezone=True), nullable=False)
     data_aprovacao = Column(DateTime(timezone=True))
@@ -275,8 +284,8 @@ class Orcamento(Base):
     arquivo_detalhado = Column(String(500))  # Planilha detalhada
     
     # Metadados
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(DateTime(timezone=True), onupdate=text('CURRENT_TIMESTAMP'))
     
     # Relacionamento
     ordem_servico = relationship("OrdemServico", back_populates="orcamentos")

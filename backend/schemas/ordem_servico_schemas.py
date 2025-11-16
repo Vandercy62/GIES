@@ -17,8 +17,6 @@ from typing import Optional, List, Dict, Any
 from enum import Enum
 
 from pydantic import BaseModel, Field, validator, root_validator
-from pydantic import EmailStr
-
 
 # Constantes para reutilização
 ID_OS_DESCRIPTION = "ID da OS"
@@ -420,8 +418,8 @@ class OrcamentoBase(BaseModel):
     
     # Valores totais
     subtotal: Decimal = Field(..., ge=0, description="Subtotal dos itens")
-    desconto_percentual: Decimal = Field(0, ge=0, le=100, description="Desconto em %")
-    desconto_valor: Decimal = Field(0, ge=0, description="Valor do desconto")
+    desconto_percentual: Decimal = Field(default=Decimal('0'), ge=0, le=100, description="Desconto em %")
+    desconto_valor: Decimal = Field(default=Decimal('0'), ge=0, description="Valor do desconto")
     valor_total: Decimal = Field(..., gt=0, description="Valor total do orçamento")
     
     # Condições

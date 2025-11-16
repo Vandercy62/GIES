@@ -14,7 +14,15 @@ from tkinter import ttk, messagebox, PhotoImage
 import threading
 import requests
 import json
+import sys
+from pathlib import Path
 from typing import Optional, Dict, Any
+
+# Adicionar diretório raiz ao path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Importar SessionManager
+from shared.session_manager import session
 
 # =======================================
 # CONFIGURAÇÕES
@@ -32,10 +40,16 @@ VERSION = "2.0.0 - Fase 2"
 class LoginWindow:
     """Janela principal de login usando tkinter"""
     
-    def __init__(self):
+    def __init__(self, skip_restore=False):
         self.root = tk.Tk()
         self.user_data = None
         self.token = None
+        
+        # Tentar restaurar sessão anterior
+        if not skip_restore and self.try_restore_session():
+            # Sessão restaurada com sucesso - fechar imediatamente
+            self.root.quit()
+            return
         
         # Configurar janela
         self.setup_window()
@@ -45,6 +59,38 @@ class LoginWindow:
         
         # Focar no campo de usuário
         self.username_entry.focus()
+    
+    def try_restore_session(self) -> bool:
+        """
+        Tenta restaurar sessão anterior salva.
+        
+        Returns:
+            True se sessão restaurada com sucesso
+        """
+        try:
+            if session.restore_session():
+                print("\n" + "="*60)
+                print("SESSÃO ANTERIOR RESTAURADA!")
+                print("="*60)
+                print(f"Usuário: {session.get_username()}")
+                print(f"Tipo: {session.get_user_type()}")
+                print(f"Token expira em: {session.time_until_expiry()}")
+                
+                # Verificar se precisa renovar token
+                if session.should_refresh_token():
+                    print("⚠️ Token próximo da expiração - renovação recomendada")
+                
+                print("="*60 + "\n")
+                
+                # Preencher user_data para compatibilidade
+                self.user_data = session.get_user_data()
+                self.token = session.get_token()
+                
+                return True
+        except Exception as e:
+            print(f"Erro ao restaurar sessão: {e}")
+        
+        return False
     
     def setup_window(self):
         """Configurar propriedades da janela"""
@@ -421,18 +467,34 @@ class LoginWindow:
         """Callback para login bem-sucedido"""
         
         def update():
-            self.user_data = data
-            self.token = data.get("access_token")
+            # Extrair dados
+            token = data.get("access_token")
+            user_info = data.get("user", {})
             
-            # Salvar token se solicitado
-            if self.remember_var.get():
-                self.save_credentials(self.token)
+            # Iniciar sessão global usando SessionManager
+            session.login(
+                token=token,
+                user_data=user_info,
+                token_expiry_hours=720,  # 30 dias (conforme API)
+                refresh_token=data.get("refresh_token")  # Se houver
+            )
+            
+            # Backup local (compatibilidade com código antigo)
+            self.user_data = data
+            self.token = token
             
             # Mostrar mensagem de sucesso
-            user = data.get("user", {})
-            username = user.get("username", "Usuário")
-            
+            username = user_info.get("username", "Usuário")
             self.update_status(f"✅ Bem-vindo, {username}!", "#27ae60")
+            
+            # Log de sessão
+            print(f"\n{'='*50}")
+            print("SESSÃO INICIADA COM SUCESSO")
+            print(f"{'='*50}")
+            print(f"Usuário: {session.get_username()}")
+            print(f"Tipo: {session.get_user_type()}")
+            print(f"Token válido até: {session.token_expiry}")
+            print(f"{'='*50}\n")
             
             # Aguardar e completar login
             self.root.after(1500, self.complete_login)
@@ -455,8 +517,24 @@ class LoginWindow:
     def complete_login(self):
         """Completar processo de login"""
         
-        print("Login realizado com sucesso!")
-        print("Dados do usuário:", self.user_data)
+        # Validar sessão
+        if not session.is_authenticated():
+            print("⚠️ ERRO: Sessão não foi iniciada corretamente!")
+            messagebox.showerror(
+                "Erro de Sessão",
+                "Não foi possível estabelecer a sessão.\nPor favor, tente novamente."
+            )
+            self.set_login_state(False)
+            return
+        
+        print("\n" + "="*60)
+        print("LOGIN CONCLUÍDO COM SUCESSO!")
+        print("="*60)
+        print(f"Usuário: {session.get_username()}")
+        print(f"Tipo: {session.get_user_type()}")
+        print(f"Autenticado: {session.is_authenticated()}")
+        print(f"Token expira em: {session.time_until_expiry()}")
+        print("="*60 + "\n")
         
         # Fechar janela de login
         self.root.quit()

@@ -16,10 +16,10 @@ Autor: GitHub Copilot
 Data: 01/11/2025
 """
 
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_
 
 from backend.database.config import get_db
 from backend.auth.dependencies import get_current_user, require_operator
@@ -31,6 +31,13 @@ from backend.schemas.cliente_schemas import (
 import logging
 
 # Configurar router
+
+# =============================================================================
+# CONSTANTES
+# =============================================================================
+
+CLIENTE_NAO_ENCONTRADO = "Cliente não encontrado"
+
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 # Configurar logging
@@ -57,15 +64,21 @@ async def criar_cliente(
                     detail="CPF/CNPJ já cadastrado"
                 )
         
+        # Gerar código único do cliente
+        ultimo_cliente = db.query(Cliente).order_by(Cliente.id.desc()).first()
+        proximo_numero = (ultimo_cliente.id + 1) if ultimo_cliente else 1
+        codigo_cliente = f"CLI{proximo_numero:05d}"  # Ex: CLI00001, CLI00002
+        
         # Criar cliente
         db_cliente = Cliente(**cliente_data.dict())
-        db_cliente.usuario_cadastro = current_user["username"]
+        setattr(db_cliente, "codigo", codigo_cliente)
+        db_cliente.usuario_criacao_id = current_user.id
         
         db.add(db_cliente)
         db.commit()
         db.refresh(db_cliente)
         
-        logger.info(f"Cliente {db_cliente.nome} criado por {current_user['username']}")
+        logger.info(f"Cliente {db_cliente.nome} ({codigo_cliente}) criado por {current_user.username}")
         return db_cliente
         
     except HTTPException:
@@ -126,7 +139,7 @@ async def listar_clientes(
         clientes = query.offset(skip).limit(limit).all()
         
         return ListagemClientes(
-            itens=clientes,
+            itens=[ClienteResponse.from_orm(c) for c in clientes],
             total=total,
             skip=skip,
             limit=limit
@@ -153,7 +166,7 @@ async def obter_cliente(
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Cliente não encontrado"
+                detail=CLIENTE_NAO_ENCONTRADO
             )
         
         return cliente
@@ -182,7 +195,7 @@ async def atualizar_cliente(
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Cliente não encontrado"
+                detail=CLIENTE_NAO_ENCONTRADO
             )
         
         # Verificar CPF/CNPJ duplicado se alterado
@@ -209,7 +222,7 @@ async def atualizar_cliente(
         db.commit()
         db.refresh(cliente)
         
-        logger.info(f"Cliente {cliente.nome} atualizado por {current_user['username']}")
+        logger.info(f"Cliente {cliente.nome} atualizado por {current_user.username}")
         return cliente
         
     except HTTPException:
@@ -236,7 +249,7 @@ async def deletar_cliente(
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Cliente não encontrado"
+                detail=CLIENTE_NAO_ENCONTRADO
             )
         
         # Verificar se tem OS vinculadas
@@ -250,7 +263,7 @@ async def deletar_cliente(
         cliente.ativo = False
         db.commit()
         
-        logger.info(f"Cliente {cliente.nome} deletado por {current_user['username']}")
+        logger.info(f"Cliente {cliente.nome} deletado por {current_user.username}")
         
     except HTTPException:
         raise
@@ -276,7 +289,7 @@ async def obter_historico_cliente(
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Cliente não encontrado"
+                detail=CLIENTE_NAO_ENCONTRADO
             )
         
         # Buscar OS do cliente

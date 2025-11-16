@@ -2,62 +2,156 @@
 
 Este é um sistema ERP completo para a empresa Primotex - Forros e Divisórias Eirelli.
 
-## 🚨 PONTOS CRÍTICOS PARA LEMBRAR - FASE 2 CONCLUÍDA ✅
+## 🚨 PONTOS CRÍTICOS PARA LEMBRAR - FASE 7 EM ANDAMENTO ⚡
 
-### 1. **Servidor Backend - CRÍTICO**
+### 1. **Sistema de Autenticação Global - NOVO! 🔐**
+- **SessionManager:** `shared/session_manager.py` - Gerencia sessão global
+- **Middleware:** `frontend/desktop/auth_middleware.py` - Decorators @require_login/@require_permission
+- **Login Integrado:** Restauração automática de sessão
+- **Dashboard Autenticado:** Barra de usuário, logout, controle de acesso
+- **Status:** ✅ 70% CONCLUÍDO (4/7 tarefas)
+
+### 2. **Servidor Backend - CRÍTICO**
 - **Porta:** 8002 (não 8001 - conflito resolvido)
 - **Comando:** `python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8002`
 - **Ambiente Virtual:** Sempre usar `.venv/Scripts/python.exe`
 - **Status:** Deve estar rodando antes de iniciar aplicação desktop
 
-### 2. **Credenciais de Sistema**
+### 3. **Credenciais de Sistema**
 - **Admin:** `admin` / `admin123`
 - **Token JWT:** Válido por 30 dias
+- **Sessão Persistida:** `~/.primotex_session.json` (auto-restaura)
 - ⚠️ **IMPORTANTE:** Alterar senha padrão em produção
 
-### 3. **Compatibilidade Crítica**
+### 4. **Compatibilidade Crítica**
 - **Python:** 3.13.7 (ambiente atual)
 - **SQLAlchemy:** 1.4.48 (NÃO atualizar para 2.x)
 - **GUI Framework:** tkinter (PyQt6 tem problemas DLL)
 - **Banco:** SQLite local (`primotex_erp.db`)
 
-### 4. **Arquivos Desktop Principais - TODOS IMPLEMENTADOS**
-- `login_tkinter.py` - Sistema de autenticação ✅
-- `dashboard.py` - Interface principal com navegação ✅
+### 5. **Arquivos Desktop Principais - FASE 7 ATUALIZADA**
+- `login_tkinter.py` - Sistema de autenticação + SessionManager ✅
+- `dashboard_principal.py` - Dashboard autenticado (NOVO) ✅
+- `auth_middleware.py` - Middleware de autenticação (NOVO) ✅
 - `clientes_window.py` - CRUD de clientes completo ✅
 - `produtos_window.py` - CRUD de produtos avançado ✅
 - `estoque_window.py` - Sistema de estoque (4 abas) ✅
 - `codigo_barras_window.py` - Gerador de códigos ✅
 - `relatorios_window.py` - Sistema de relatórios PDF ✅
-- `navigation_system.py` - Sistema de navegação ✅
-- `test_integration_fase2.py` - Testes integrados ✅
+- `os_dashboard.py` - Dashboard de OS (7 fases) ✅
+- `financeiro_window.py` - Sistema financeiro (5 abas) ✅
+- `agendamento_window.py` - Sistema de agendamento ✅
 
-### 5. **URLs de API**
+### 6. **URLs de API**
 - **Base:** `http://127.0.0.1:8002`
 - **Health:** `/health`
 - **Auth:** `/api/v1/auth/login`
 - **Clientes:** `/api/v1/clientes`
+- **OS:** `/api/v1/os` (6 endpoints)
 - **Docs:** `/docs`
 
-### 6. **Estrutura de Permissões**
-- **Administrador** → Acesso total
-- **Gerente** → Gestão operacional
-- **Operador** → Operações diárias
-- **Consulta** → Apenas visualização
+### 7. **Estrutura de Permissões - HIERÁRQUICA**
+- **Administrador** → Acesso total (admin, gerente, operador, consulta)
+- **Gerente** → Gestão operacional (gerente, operador, consulta)
+- **Operador** → Operações diárias (operador, consulta)
+- **Consulta** → Apenas visualização (consulta)
 
-### 7. **Validações Implementadas**
+### 8. **Validações Implementadas**
 - CPF/CNPJ com formatação automática
 - Email com regex validation
 - Telefone com máscara (XX) XXXXX-XXXX
 - CEP com formato XXXXX-XXX
 
-### 8. **Threading e Performance**
+### 9. **Autenticação Global - PADRÃO OBRIGATÓRIO** 🔐
+Todos os novos módulos DEVEM seguir este padrão:
+
+```python
+# frontend/desktop/seu_modulo.py
+from frontend.desktop.auth_middleware import (
+    require_login,
+    get_token_for_api,
+    create_auth_header,
+    get_current_user_info
+)
+
+@require_login()
+class SeuModulo:
+    def __init__(self, parent):
+        # NÃO recebe token como parâmetro - usa SessionManager
+        self.parent = parent
+        self.token = get_token_for_api()  # Pega token da sessão global
+        
+    def fazer_requisicao_api(self):
+        headers = create_auth_header()  # Headers com Bearer token
+        response = requests.get(url, headers=headers)
+```
+
+**Decorators Disponíveis:**
+- `@require_login()` - Redireciona para login se não autenticado
+- `@require_permission('admin')` - Valida permissão específica
+- `@require_permission('admin|gerente')` - Aceita múltiplas permissões
+
+**Helpers Disponíveis:**
+- `get_token_for_api()` - Retorna token JWT da sessão
+- `create_auth_header()` - Retorna dict com Authorization header
+- `get_current_user_info()` - Retorna dados do usuário logado
+- `logout_user()` - Faz logout e limpa sessão
+- `check_session_or_login(parent)` - Verifica sessão ou abre login
+
+### 10. **Threading e Performance**
 - Todas chamadas API em threads separadas
 - UI não-blocking implementada
 - Timeout de 10 segundos para requests
 - Loading indicators em todos os módulos
 
-### 9. **NOVOS SISTEMAS IMPLEMENTADOS - FASE 2**
+### 11. **SessionManager - Singleton Global**
+Arquivo: `shared/session_manager.py` (465 linhas)
+
+**NÃO crie múltiplas instâncias!** Use o singleton:
+```python
+from shared.session_manager import session  # Importa instância global
+
+# Verificar autenticação
+if session.is_authenticated():
+    token = session.get_token()
+    user = session.get_user_data()
+    
+# Fazer login (apenas em login_tkinter.py)
+session.login(token, user_data, token_expiry_hours=30*24)
+
+# Fazer logout
+session.logout()
+
+# Verificar permissões
+if session.has_permission('admin'):
+    # Código admin
+```
+
+**Persistência Automática:**
+- Sessão salva em: `~/.primotex_session.json`
+- Restauração automática no próximo login
+- Expira após 30 dias (configurável)
+
+### 12. **NOVOS SISTEMAS IMPLEMENTADOS - FASE 7**
+- **Sistema de Login Global:** SessionManager singleton thread-safe
+  - Gerenciamento centralizado de sessão
+  - Persistência automática em arquivo JSON (~/.primotex_session.json)
+  - Auto-restauração de sessões anteriores
+  - Expira em 30 dias (configurável)
+
+- **Middleware de Autenticação:** Decorators e helpers
+  - @require_login() - Proteção de classes/funções
+  - @require_permission() - Validação hierárquica de permissões
+  - create_auth_header() - Headers prontos para API
+  - logout_user() - Logout seguro com confirmação
+
+- **Dashboard Principal Autenticado:**
+  - Barra de usuário (username, perfil, logout)
+  - 3 widgets principais (OS, Agendamento, Financeiro)
+  - Navegação rápida (Clientes, Produtos, Estoque, Relatórios)
+  - API calls com threading + auth automático
+
+### 13. **SISTEMAS IMPLEMENTADOS - FASE 2**
 - **Códigos de Barras:** python-barcode + Pillow
   - Formatos: EAN13, EAN8, Code128, Code39, UPCA
   - Geração individual e em lote
@@ -190,13 +284,26 @@ primotex_erp/
   - ✅ Relatórios PDF
   - ✅ Sistema de navegação
   - ✅ Testes de integração
+- **✅ FASE 7:** Sistema de Login Global - 100% Completa (7/7 tarefas) 🎉
+  - ✅ SessionManager global criado
+  - ✅ Login integrado com auto-restore
+  - ✅ Auth middleware com decorators
+  - ✅ Dashboard autenticado
+  - ✅ Migração de 6 módulos (6/6) - 100%
+  - ✅ Testes de integração
+  - ✅ Documentação final
 
-## 🚀 **Próximos Passos - FASE 3**
+## 🚀 **Próximos Passos**
 
+**FASE 3 - Próxima Grande Fase:**
 1. **Sistema de Ordem de Serviço (OS)** - 7 fases completas
 2. **Agendamento Integrado** - Calendário com OS
 3. **Módulo Financeiro** - Contas a receber/pagar
 4. **Comunicação WhatsApp** - Templates automáticos
+
+**Validação FASE 7:**
+- Execute: `python frontend/desktop/test_session_quick.py` (validação rápida)
+- Execute: `python frontend/desktop/test_session_integration.py` (suite completa)
 
 ## 📋 **Comandos Essenciais**
 

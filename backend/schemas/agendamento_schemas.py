@@ -118,9 +118,9 @@ class ConfiguracaoAgendaBase(BaseModel):
     
     @validator('horario_fim')
     @classmethod
-    def validar_horarios(cls, v: time, info) -> time:
+    def validar_horarios(cls, v: time, values) -> time:
         """Valida se horário fim é posterior ao início"""
-        if 'horario_inicio' in info.data and v <= info.data['horario_inicio']:
+        if 'horario_inicio' in values and v <= values['horario_inicio']:
             raise ValueError("Horário de fim deve ser posterior ao de início")
         return v
     
@@ -143,18 +143,18 @@ class DisponibilidadeUsuarioBase(BaseModel):
     
     @validator('data_fim')
     @classmethod
-    def validar_periodo(cls, v: datetime, info) -> datetime:
+    def validar_periodo(cls, v: datetime, values) -> datetime:
         """Valida se data fim é posterior ao início"""
-        if 'data_inicio' in info.data and v <= info.data['data_inicio']:
+        if 'data_inicio' in values and v <= values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
     
-    @root_validator(pre=False)
-    def validar_motivo_indisponibilidade(self) -> 'DisponibilidadeUsuarioBase':
+    @root_validator(pre=True)
+    def validar_motivo_indisponibilidade(cls, values):
         """Valida motivo para indisponibilidades"""
-        if not self.disponivel and not self.motivo:
+        if not values.get('disponivel') and not values.get('motivo'):
             raise ValueError("Motivo é obrigatório para indisponibilidades")
-        return self
+        return values
 
 
 class BloqueioAgendaBase(BaseModel):
@@ -169,18 +169,18 @@ class BloqueioAgendaBase(BaseModel):
     
     @validator('data_fim')
     @classmethod
-    def validar_periodo_bloqueio(cls, v: datetime, info) -> datetime:
+    def validar_periodo_bloqueio(cls, v: datetime, values) -> datetime:
         """Valida período do bloqueio"""
-        if 'data_inicio' in info.data and v <= info.data['data_inicio']:
+        if 'data_inicio' in values and v <= values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
     
-    @root_validator(pre=False)
-    def validar_usuarios_bloqueio(self) -> 'BloqueioAgendaBase':
+    @root_validator(pre=True)
+    def validar_usuarios_bloqueio(cls, values):
         """Valida usuários afetados pelo bloqueio"""
-        if not self.afeta_todos_usuarios and not self.usuarios_afetados:
-            raise ValueError("Deve especificar usuários afetados ou marcar como 'afeta todos'")
-        return self
+        if not values.get('afeta_todos_usuarios') and not values.get('usuarios_afetados'):
+            raise ValueError("Deve especificar usuários afetados ou marcar como global")
+        return values
 
 
 # ================================

@@ -158,7 +158,7 @@ from backend.api.routers.fornecedor_router import router as fornecedor_router
 from backend.api.routers.colaborador_router import router as colaborador_router
 from backend.api.routers.agendamento_router import router as agendamento_router
 from backend.api.routers.financeiro_router import router as financeiro_router
-from backend.api.routers.os_router import router as os_router
+from backend.api.routers.ordem_servico_router import router as os_router  # CORRIGIDO - FASE 3
 
 # Incluir router de autenticação
 app.include_router(auth_router, prefix="/api/v1", tags=["Autenticação"])

@@ -13,9 +13,11 @@ Características:
 - Atribuição de técnicos
 - Integração com agendamento
 - Interface responsiva e moderna
+- Autenticação global com SessionManager
 
 Autor: GitHub Copilot
 Data: 29/10/2025
+Última atualização: 15/11/2025 - Migração para SessionManager (FASE 7)
 """
 
 import tkinter as tk
@@ -27,17 +29,39 @@ import threading
 from typing import Dict, List, Optional, Any
 import logging
 
+# Importações de autenticação global - FASE 7
+from frontend.desktop.auth_middleware import (
+    require_login,
+    get_token_for_api,
+    create_auth_header,
+    get_current_user_info,
+    logout_user
+)
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@require_login()
 class OrdemServicoWindow:
     """Interface principal para gestão de Ordem de Serviço"""
     
     def __init__(self, parent=None):
         self.parent = parent
         self.api_base_url = "http://127.0.0.1:8002/api/v1"
-        self.token = None
+        
+        # Obter token da sessão global - FASE 7
+        self.token = get_token_for_api()
+        if not self.token:
+            logger.error("Token não encontrado - usuário não autenticado")
+            if parent:
+                parent.destroy()
+            return
+        
+        # Dados do usuário logado
+        user_info = get_current_user_info()
+        self.usuario_logado = user_info.get('username', 'desconhecido') if user_info else 'desconhecido'
+        logger.info(f"OS Window inicializada para usuário: {self.usuario_logado}")
         
         # Dados da OS atual
         self.os_atual = None
@@ -678,8 +702,10 @@ class OrdemServicoWindow:
     def _carregar_dados_thread(self):
         """Carregar dados em thread separada"""
         try:
-            # Testar conexão
-            response = requests.get(f"{self.api_base_url}/ordem-servico/health", timeout=5)
+            # Testar conexão COM autenticação - FASE 7
+            headers = create_auth_header()
+            response = requests.get(f"{self.api_base_url}/ordem-servico/health", 
+                                  headers=headers, timeout=5)
             if response.status_code == 200:
                 self.window.after(0, lambda: self.conexao_text.set("🟢 Conectado"))
                 
@@ -704,7 +730,10 @@ class OrdemServicoWindow:
     def carregar_lista_os(self):
         """Carregar lista de OS da API"""
         try:
-            response = requests.get(f"{self.api_base_url}/ordem-servico/", timeout=10)
+            # Autenticação global - FASE 7
+            headers = create_auth_header()
+            response = requests.get(f"{self.api_base_url}/ordem-servico/", 
+                                  headers=headers, timeout=10)
             if response.status_code == 200:
                 self.lista_os = response.json()
                 self.window.after(0, self.atualizar_tree_os)
@@ -718,7 +747,10 @@ class OrdemServicoWindow:
     def carregar_clientes(self):
         """Carregar lista de clientes"""
         try:
-            response = requests.get(f"{self.api_base_url}/clientes/", timeout=10)
+            # Autenticação global - FASE 7
+            headers = create_auth_header()
+            response = requests.get(f"{self.api_base_url}/clientes/", 
+                                  headers=headers, timeout=10)
             if response.status_code == 200:
                 clientes = response.json()
                 clientes_lista = [f"{c['id']} - {c['nome']}" for c in clientes]
@@ -928,18 +960,20 @@ class OrdemServicoWindow:
             }
             
             if self.os_atual:
-                # Atualizar OS existente
+                # Atualizar OS existente - FASE 7: Com autenticação
+                headers = create_auth_header()
                 response = requests.put(f"{self.api_base_url}/ordem-servico/{self.os_atual['id']}", 
-                                      json=dados_os, timeout=10)
+                                      json=dados_os, headers=headers, timeout=10)
                 if response.status_code == 200:
                     messagebox.showinfo("Sucesso", "OS atualizada com sucesso!")
                     self.carregar_lista_os()
                 else:
                     messagebox.showerror("Erro", f"Erro ao atualizar OS: {response.text}")
             else:
-                # Criar nova OS
+                # Criar nova OS - FASE 7: Com autenticação
+                headers = create_auth_header()
                 response = requests.post(f"{self.api_base_url}/ordem-servico/", 
-                                       json=dados_os, timeout=10)
+                                       json=dados_os, headers=headers, timeout=10)
                 if response.status_code == 201:
                     messagebox.showinfo("Sucesso", "OS criada com sucesso!")
                     self.carregar_lista_os()
@@ -960,8 +994,10 @@ class OrdemServicoWindow:
         if messagebox.askyesno("Confirmação", 
                               f"Deseja realmente excluir a OS {self.os_atual.get('numero_os', '')}?"):
             try:
+                # DELETE com autenticação - FASE 7
+                headers = create_auth_header()
                 response = requests.delete(f"{self.api_base_url}/ordem-servico/{self.os_atual['id']}", 
-                                         timeout=10)
+                                         headers=headers, timeout=10)
                 if response.status_code == 200:
                     messagebox.showinfo("Sucesso", "OS excluída com sucesso!")
                     self.carregar_lista_os()

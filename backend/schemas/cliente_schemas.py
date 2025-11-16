@@ -19,22 +19,22 @@ class ClienteBase(BaseModel):
     nome: str = Field(..., min_length=2, max_length=150)
     tipo_pessoa: str = Field(..., pattern="^(fisica|juridica)$")
     cpf_cnpj: Optional[str] = Field(None, max_length=18)
-    email: Optional[EmailStr] = None
-    telefone: Optional[str] = Field(None, max_length=20)
-    endereco: Optional[str] = Field(None, max_length=200)
-    numero: Optional[str] = Field(None, max_length=10)
-    complemento: Optional[str] = Field(None, max_length=50)
-    bairro: Optional[str] = Field(None, max_length=100)
-    cidade: Optional[str] = Field(None, max_length=100)
-    estado: Optional[str] = Field(None, max_length=2)
-    cep: Optional[str] = Field(None, max_length=10)
-    observacoes: Optional[str] = None
-    ativo: bool = True
+    email_principal: Optional[EmailStr] = None  # CORRIGIDO - modelo usa email_principal
+    telefone_celular: Optional[str] = Field(None, max_length=20)  # CORRIGIDO - modelo usa telefone_celular
+    endereco_logradouro: Optional[str] = Field(None, max_length=200)  # CORRIGIDO - modelo usa endereco_logradouro
+    endereco_numero: Optional[str] = Field(None, max_length=10)
+    endereco_complemento: Optional[str] = Field(None, max_length=50)
+    endereco_bairro: Optional[str] = Field(None, max_length=100)
+    endereco_cidade: Optional[str] = Field(None, max_length=100)
+    endereco_estado: Optional[str] = Field(None, max_length=2)
+    endereco_cep: Optional[str] = Field(None, max_length=10)
+    observacoes_gerais: Optional[str] = None  # CORRIGIDO - modelo usa observacoes_gerais
+    status: str = Field(default="Ativo", pattern="^(Ativo|Inativo|Prospect)$")  # ADICIONADO
 
 
 class ClienteCreate(ClienteBase):
-    """Schema para criação de cliente"""
-    pass
+    """Schema para criação de cliente - herda todos os campos de ClienteBase"""
+    ...  # Mantém a classe vazia intencionalmente para herança
 
 
 class ClienteUpdate(BaseModel):
@@ -42,24 +42,25 @@ class ClienteUpdate(BaseModel):
     nome: Optional[str] = Field(None, min_length=2, max_length=150)
     tipo_pessoa: Optional[str] = Field(None, pattern="^(fisica|juridica)$")
     cpf_cnpj: Optional[str] = Field(None, max_length=18)
-    email: Optional[EmailStr] = None
-    telefone: Optional[str] = Field(None, max_length=20)
-    endereco: Optional[str] = Field(None, max_length=200)
-    numero: Optional[str] = Field(None, max_length=10)
-    complemento: Optional[str] = Field(None, max_length=50)
-    bairro: Optional[str] = Field(None, max_length=100)
-    cidade: Optional[str] = Field(None, max_length=100)
-    estado: Optional[str] = Field(None, max_length=2)
-    cep: Optional[str] = Field(None, max_length=10)
-    observacoes: Optional[str] = None
+    email_principal: Optional[EmailStr] = None
+    telefone_celular: Optional[str] = Field(None, max_length=20)
+    endereco_logradouro: Optional[str] = Field(None, max_length=200)
+    endereco_numero: Optional[str] = Field(None, max_length=10)
+    endereco_complemento: Optional[str] = Field(None, max_length=50)
+    endereco_bairro: Optional[str] = Field(None, max_length=100)
+    endereco_cidade: Optional[str] = Field(None, max_length=100)
+    endereco_estado: Optional[str] = Field(None, max_length=2)
+    endereco_cep: Optional[str] = Field(None, max_length=10)
+    observacoes_gerais: Optional[str] = None
     ativo: Optional[bool] = None
 
 
 class ClienteResponse(ClienteBase):
     """Schema para resposta de cliente"""
     id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    codigo: str  # ADICIONADO - campo código do cliente
+    data_cadastro: Optional[datetime] = None  # CORRIGIDO - modelo usa data_cadastro
+    data_atualizacao: Optional[datetime] = None  # CORRIGIDO - modelo usa data_atualizacao
     
     model_config = ConfigDict(from_attributes=True)
 

@@ -41,6 +41,10 @@ from backend.auth.dependencies import get_current_user
 from backend.models.user_model import Usuario
 
 # Criar router
+
+# Constantes
+FORNECEDOR_NOT_FOUND = "Fornecedor não encontrado"
+
 router = APIRouter(prefix="/fornecedores", tags=["Fornecedores"])
 
 
@@ -279,7 +283,7 @@ async def buscar_fornecedor(
         if not fornecedor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fornecedor não encontrado"
+                detail=FORNECEDOR_NOT_FOUND
             )
         
         return FornecedorResponse.model_validate(fornecedor)
@@ -311,7 +315,7 @@ async def atualizar_fornecedor(
         if not fornecedor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fornecedor não encontrado"
+                detail=FORNECEDOR_NOT_FOUND
             )
         
         # Atualizar campos
@@ -356,12 +360,12 @@ async def remover_fornecedor(
         if not fornecedor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fornecedor não encontrado"
+                detail=FORNECEDOR_NOT_FOUND
             )
         
         if force:
             # Remoção física (verificar dependências)
-            # TODO: Verificar se há contas a pagar vinculadas
+            # NOTE: Verificação de contas a pagar vinculadas será implementada na integração financeira completa
             db.delete(fornecedor)
         else:
             # Soft delete
@@ -413,7 +417,7 @@ async def estatisticas_fornecedores(
             Fornecedor.ativo == True
         ).group_by(Fornecedor.categoria).all()
         
-        total_por_categoria = {cat: total for cat, total in categorias}
+        total_por_categoria = dict(categorias)
         
         # Total por estado
         estados = db.query(
@@ -424,7 +428,7 @@ async def estatisticas_fornecedores(
             Fornecedor.estado.isnot(None)
         ).group_by(Fornecedor.estado).all()
         
-        total_por_estado = {est: total for est, total in estados}
+        total_por_estado = dict(estados)
         
         # Avaliação média
         avaliacao_media = db.query(
@@ -504,7 +508,7 @@ async def alterar_status_fornecedor(
         if not fornecedor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fornecedor não encontrado"
+                detail=FORNECEDOR_NOT_FOUND
             )
         
         # Atualizar status
