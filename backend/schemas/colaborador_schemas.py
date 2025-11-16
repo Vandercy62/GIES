@@ -104,11 +104,11 @@ class CargoBase(BaseModel):
     nome: str = Field(..., min_length=2, max_length=100, description="Nome do cargo")
     descricao: Optional[str] = Field(None, max_length=500, description="Descrição do cargo")
     codigo: Optional[str] = Field(None, max_length=20, description="Código identificador")
-    nivel_hierarquico: int = Field(1, ge=1, le=5, description="Nível hierárquico (1-5)")
+    nivel_hierarquico: Optional[int] = Field(None, ge=1, le=5, description="Nível hierárquico (1-5)")
     salario_base: Optional[Decimal] = Field(None, ge=0, description="Salário base sugerido")
     salario_minimo: Optional[Decimal] = Field(None, ge=0, description="Salário mínimo")
     salario_maximo: Optional[Decimal] = Field(None, ge=0, description="Salário máximo")
-    requer_superior: bool = Field(False, description="Cargo requer superior direto")
+    requer_superior: Optional[bool] = Field(None, description="Cargo requer superior direto")
 
 
 class CargoCreate(CargoBase):

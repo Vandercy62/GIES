@@ -100,6 +100,34 @@ class UserUpdate(BaseModel):
     ativo: Optional[bool] = Field(None, description=FIELD_STATUS_ATIVO)
     observacoes: Optional[str] = Field(None, description=FIELD_OBSERVACOES)
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema para solicitação de recuperação de senha"""
+    username: str = Field(..., min_length=3, max_length=50, description="Nome de usuário")
+    email: EmailStr = Field(..., description="Email cadastrado")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "username": "joao.silva",
+                "email": "joao@primotex.com"
+            }
+        }
+
+class PasswordRecoveryResponse(BaseModel):
+    """Schema para response de recuperação de senha"""
+    message: str = Field(..., description="Mensagem de sucesso")
+    temporary_password: str = Field(..., description="Senha temporária gerada")
+    username: str = Field(..., description="Nome de usuário")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "Senha temporária gerada com sucesso",
+                "temporary_password": "Primotex@2025",
+                "username": "joao.silva"
+            }
+        }
+
 class UserResponse(BaseModel):
     """Schema para response de usuário"""
     id: int = Field(..., description="ID do usuário")

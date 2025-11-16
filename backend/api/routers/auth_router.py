@@ -20,7 +20,8 @@ from backend.models.user_model import Usuario, PERFIS_SISTEMA
 from backend.schemas.auth_schemas import (
     LoginRequest, LoginResponse, UserCreate, UserUpdate, 
     UserResponse, PasswordChangeRequest, PasswordResetRequest,
-    SuccessResponse, ErrorResponse, PerfilResponse
+    SuccessResponse, ErrorResponse, PerfilResponse,
+    ForgotPasswordRequest, PasswordRecoveryResponse
 )
 from backend.auth.jwt_handler import (
     generate_user_token, verify_password, hash_password,
@@ -119,6 +120,9 @@ async def login(
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Converter para segundos
             user=UserResponse.model_validate(user)
         )
+    except HTTPException:
+        # Re-lançar HTTPException sem modificar (401, 403, etc)
+        raise
     except Exception as e:
         print("[ERRO LOGIN] Exceção capturada no endpoint de login:", e)
         traceback.print_exc()
@@ -245,6 +249,57 @@ async def change_password(
     
     return SuccessResponse(
         message="Senha alterada com sucesso"
+    )
+
+@router.post("/forgot-password", response_model=PasswordRecoveryResponse, summary="Recuperar senha")
+async def forgot_password(
+    recovery_data: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Recuperar senha esquecida gerando senha temporária.
+    
+    - **username**: Nome de usuário
+    - **email**: Email cadastrado
+    
+    Gera senha temporária para colaboradores que esqueceram a senha.
+    Retorna a senha temporária que deve ser alterada no próximo login.
+    """
+    # Buscar usuário por username e email
+    user = db.query(Usuario).filter(
+        Usuario.username == recovery_data.username,
+        Usuario.email == recovery_data.email
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado ou dados incorretos"
+        )
+    
+    if not user.ativo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo. Contate o administrador."
+        )
+    
+    # Gerar senha temporária simples (formato: Primotex@XXXX)
+    import random
+    import string
+    random_suffix = ''.join(random.choices(string.digits, k=4))
+    temporary_password = f"Primotex@{random_suffix}"
+    
+    # Atualizar senha do usuário
+    user.senha_hash = hash_password(temporary_password)
+    user.ultima_atividade = datetime.now()
+    db.commit()
+    
+    logger.info(f"Senha recuperada para usuário: {user.username}")
+    
+    return PasswordRecoveryResponse(
+        message="Senha temporária gerada com sucesso. Anote e altere após o login.",
+        temporary_password=temporary_password,
+        username=user.username
     )
 
 # =======================================

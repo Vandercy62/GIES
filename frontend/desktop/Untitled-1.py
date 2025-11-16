@@ -10,13 +10,13 @@ Data: 29/10/2025
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, PhotoImage
 import threading
 import requests
-import sys
 import json
-import base64
+import sys
 from pathlib import Path
+from typing import Optional, Dict, Any
 
 # Adicionar diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -33,14 +33,6 @@ COMPANY_NAME = "Primotex - Forros e Divisórias Eireli"
 SYSTEM_NAME = "Sistema ERP Primotex"
 VERSION = "2.0.0 - Fase 2"
 
-# Constantes de estilo
-STYLE_LOGIN_ENTRY = "Login.TEntry"
-STYLE_TITLE_LABEL = "Title.TLabel"
-STYLE_SUBTITLE_LABEL = "Subtitle.TLabel"
-STYLE_FIELD_LABEL = "Field.TLabel"
-EVENT_RETURN = '<Return>'
-
-
 # =======================================
 # CLASSE PRINCIPAL DE LOGIN
 # =======================================
@@ -53,8 +45,6 @@ class LoginWindow:
         self.user_data = None
         self.token = None
         self._closing = False  # Flag para indicar que está fechando
-        self._open_dashboard = False  # Flag para abrir dashboard após login
-        self.api_url = API_BASE_URL  # URL base da API
         
         # Configurar janela
         self.setup_window()
@@ -65,7 +55,8 @@ class LoginWindow:
         # Focar no campo de usuário
         self.username_entry.focus()
         
-        # NÃO iniciar mainloop aqui - será chamado pelo método run()
+        # Iniciar mainloop
+        self.root.mainloop()
     
     def try_restore_session(self) -> bool:
         """
@@ -85,10 +76,7 @@ class LoginWindow:
                 
                 # Verificar se precisa renovar token
                 if session.should_refresh_token():
-                    print(
-                        "⚠️ Token próximo da expiração - "
-                        "renovação recomendada"
-                    )
+                    print("⚠️ Token próximo da expiração - renovação recomendada")
                 
                 print("="*60 + "\n")
                 
@@ -151,28 +139,28 @@ class LoginWindow:
         
         # Estilo para entry
         style.configure(
-            STYLE_LOGIN_ENTRY,
+            "Login.TEntry",
             font=('Arial', 11),
             padding=8
         )
         
         # Estilo para labels
         style.configure(
-            STYLE_TITLE_LABEL,
+            "Title.TLabel",
             font=('Arial', 18, 'bold'),
             background='white',
             foreground='#2c3e50'
         )
         
         style.configure(
-            STYLE_SUBTITLE_LABEL,
+            "Subtitle.TLabel",
             font=('Arial', 10),
             background='white',
             foreground='#7f8c8d'
         )
         
         style.configure(
-            STYLE_FIELD_LABEL,
+            "Field.TLabel",
             font=('Arial', 10, 'bold'),
             background='#f8f9fa',
             foreground='#2c3e50'
@@ -279,7 +267,7 @@ class LoginWindow:
         title_label = ttk.Label(
             header_frame,
             text=SYSTEM_NAME,
-            style=STYLE_TITLE_LABEL
+            style="Title.TLabel"
         )
         title_label.pack(pady=(10, 5))
         
@@ -287,7 +275,7 @@ class LoginWindow:
         company_label = ttk.Label(
             header_frame,
             text=COMPANY_NAME,
-            style=STYLE_SUBTITLE_LABEL
+            style="Subtitle.TLabel"
         )
         company_label.pack()
         
@@ -295,7 +283,7 @@ class LoginWindow:
         version_label = ttk.Label(
             header_frame,
             text=f"Versão {VERSION}",
-            style=STYLE_SUBTITLE_LABEL
+            style="Subtitle.TLabel"
         )
         version_label.pack(pady=(2, 0))
     
@@ -313,7 +301,7 @@ class LoginWindow:
         user_label = ttk.Label(
             form_inner,
             text="Usuário:",
-            style=STYLE_FIELD_LABEL
+            style="Field.TLabel"
         )
         user_label.pack(anchor='w', pady=(0, 5))
         
@@ -321,18 +309,16 @@ class LoginWindow:
             form_inner,
             font=('Arial', 11),
             width=35,
-            style=STYLE_LOGIN_ENTRY
+            style="Login.TEntry"
         )
         self.username_entry.pack(pady=(0, 10))
-        self.username_entry.bind(
-            EVENT_RETURN, lambda e: self.password_entry.focus()
-        )
+        self.username_entry.bind('<Return>', lambda e: self.password_entry.focus())
         
         # Campo de senha
         password_label = ttk.Label(
             form_inner,
             text="Senha:",
-            style=STYLE_FIELD_LABEL
+            style="Field.TLabel"
         )
         password_label.pack(anchor='w', pady=(0, 5))
         
@@ -345,10 +331,10 @@ class LoginWindow:
             font=('Arial', 11),
             width=30,
             show='*',
-            style=STYLE_LOGIN_ENTRY
+            style="Login.TEntry"
         )
         self.password_entry.pack(side='left', fill='x', expand=True)
-        self.password_entry.bind(EVENT_RETURN, lambda e: self.handle_login())
+        self.password_entry.bind('<Return>', lambda e: self.handle_login())
         
         # Botão mostrar/ocultar senha
         self.show_password_var = tk.BooleanVar(value=False)
@@ -376,16 +362,6 @@ class LoginWindow:
             fg='#7f8c8d'
         )
         remember_check.pack(anchor='w')
-        
-        # Carregar credenciais salvas DEPOIS de criar todos os campos
-        saved_user, saved_pass = self.load_credentials()
-        if saved_user and saved_pass:
-            self.username_entry.delete(0, tk.END)
-            self.username_entry.insert(0, saved_user)
-            self.password_entry.delete(0, tk.END)
-            self.password_entry.insert(0, saved_pass)
-            self.remember_var.set(True)
-            print("✅ Credenciais carregadas automaticamente")
     
     def toggle_password_visibility(self):
         """Alternar visibilidade da senha"""
@@ -414,8 +390,9 @@ class LoginWindow:
         self.login_button = ttk.Button(
             inner_frame,
             text="Entrar",
+            style="Login.TButton",
             command=self.handle_login,
-            width=12
+            width=15
         )
         self.login_button.pack(side='left', padx=(0, 10))
         
@@ -424,7 +401,7 @@ class LoginWindow:
             inner_frame,
             text="Cancelar",
             command=self.root.quit,
-            width=12
+            width=15
         )
         cancel_button.pack(side='left')
         
@@ -433,9 +410,7 @@ class LoginWindow:
         print("🔑 CRIANDO LINK 'ESQUECI MINHA SENHA'")
         print("="*60)
         
-        forgot_frame = tk.Frame(
-            button_frame, bg='#ecf0f1', relief='ridge', bd=1
-        )
+        forgot_frame = tk.Frame(button_frame, bg='#ecf0f1', relief='ridge', bd=1)
         forgot_frame.pack(pady=(10, 5), fill='x')
         
         forgot_link = tk.Label(
@@ -451,7 +426,7 @@ class LoginWindow:
         forgot_link.pack()
         forgot_link.bind('<Button-1>', lambda e: self.open_password_recovery())
         
-        print("✅ Link criado com sucesso!")
+        print(f"✅ Link criado com sucesso!")
         print(f"   Texto: '{forgot_link.cget('text')}'")
         print(f"   Cor: {forgot_link.cget('fg')}")
         print(f"   Fonte: {forgot_link.cget('font')}")
@@ -480,8 +455,7 @@ class LoginWindow:
         """Criar rodapé"""
         
         footer_frame = tk.Frame(parent, bg='white')
-        # Removido side='bottom' para evitar sobreposição
-        footer_frame.pack(fill='x', padx=30, pady=(10, 20))
+        footer_frame.pack(fill='x', padx=30, pady=(10, 20))  # Removido side='bottom'
         
         # Status de conexão
         self.status_label = tk.Label(
@@ -574,13 +548,6 @@ class LoginWindow:
                 if response.status_code == 200:
                     data = response.json()
                     self.update_progress(100)
-                    
-                    # Salvar credenciais se "Lembrar-me" estiver marcado
-                    if self.remember_var.get():
-                        self.save_credentials(username, password)
-                    else:
-                        self.clear_credentials()
-                    
                     self.on_login_success(data)
                 else:
                     error_msg = "Credenciais inválidas"
@@ -672,13 +639,13 @@ class LoginWindow:
             self.update_status(f"✅ Bem-vindo, {username}!", "#27ae60")
             
             # Log de sessão
-            print("\n" + "="*50)
+            print(f"\n{'='*50}")
             print("SESSÃO INICIADA COM SUCESSO")
-            print("="*50)
+            print(f"{'='*50}")
             print(f"Usuário: {session.get_username()}")
             print(f"Tipo: {session.get_user_type()}")
             print(f"Token válido até: {session.token_expiry}")
-            print("="*50 + "\n")
+            print(f"{'='*50}\n")
             
             # Aguardar e completar login
             self.root.after(1500, self.complete_login)
@@ -716,8 +683,7 @@ class LoginWindow:
             print("⚠️ ERRO: Sessão não foi iniciada corretamente!")
             messagebox.showerror(
                 "Erro de Sessão",
-                "Não foi possível estabelecer a sessão.\n"
-                "Por favor, tente novamente."
+                "Não foi possível estabelecer a sessão.\nPor favor, tente novamente."
             )
             self.set_login_state(False)
             return
@@ -731,10 +697,7 @@ class LoginWindow:
         print(f"Token expira em: {session.time_until_expiry()}")
         print("="*60 + "\n")
         
-        # Marcar que deve abrir dashboard
-        self._open_dashboard = True
-        
-        # Fechar janela de login (quit mantém mainloop ativo)
+        # Fechar janela de login
         self.root.quit()
     
     def open_dashboard(self):
@@ -791,8 +754,7 @@ class LoginWindow:
         
         info_label = tk.Label(
             info_frame,
-            text=("Digite seu usuário e email cadastrado para\n"
-                  "receber uma senha temporária."),
+            text="Digite seu usuário e email cadastrado para\\nreceber uma senha temporária.",
             bg='white',
             fg='#2c3e50',
             font=('Arial', 10),
@@ -927,14 +889,10 @@ class LoginWindow:
                         font=('Arial', 9, 'bold')
                     ).pack(pady=(0, 20))
                     
-                    def close_windows():
-                        success_window.destroy()
-                        recovery_window.destroy()
-                    
                     tk.Button(
                         success_window,
                         text="Fechar",
-                        command=close_windows,
+                        command=lambda: [success_window.destroy(), recovery_window.destroy()],
                         bg='#3498db',
                         fg='white',
                         font=('Arial', 10, 'bold'),
@@ -946,9 +904,8 @@ class LoginWindow:
                     
                 else:
                     error_data = response.json()
-                    detail = error_data.get('detail', 'Erro desconhecido')
                     status_label.config(
-                        text=f"❌ {detail}",
+                        text=f"❌ {error_data.get('detail', 'Erro desconhecido')}",
                         fg='#e74c3c'
                     )
                     
@@ -994,86 +951,33 @@ class LoginWindow:
         ).pack(side='left')
         
         # Bind Enter key
-        username_entry.bind(EVENT_RETURN, lambda e: email_entry.focus_set())
-        email_entry.bind(EVENT_RETURN, lambda e: do_recovery())
+        username_entry.bind('<Return>', lambda e: email_entry.focus_set())
+        email_entry.bind('<Return>', lambda e: do_recovery())
     
-    def save_credentials(self, username, password):
-        """Salvar credenciais criptografadas"""
+    def save_credentials(self, token):
+        """Salvar credenciais"""
         try:
-            # Criptografia simples com base64
-            credentials = {
-                'username': base64.b64encode(username.encode()).decode(),
-                'password': base64.b64encode(password.encode()).decode()
-            }
-            
-            cred_file = Path.home() / '.primotex_credentials.json'
-            with open(cred_file, 'w') as f:
-                json.dump(credentials, f)
-            
-            print(f"Credenciais salvas em: {cred_file}")
+            print(f"Token salvo para sessão: {token[:20]}...")
         except Exception as e:
             print(f"Erro ao salvar credenciais: {e}")
-    
-    def load_credentials(self):
-        """Carregar credenciais salvas"""
-        try:
-            cred_file = Path.home() / '.primotex_credentials.json'
-            if cred_file.exists():
-                with open(cred_file, 'r') as f:
-                    credentials = json.load(f)
-                
-                # Descriptografar
-                username = base64.b64decode(
-                    credentials['username']
-                ).decode()
-                password = base64.b64decode(
-                    credentials['password']
-                ).decode()
-                
-                return username, password
-        except Exception as e:
-            print(f"Erro ao carregar credenciais: {e}")
-        
-        return None, None
-    
-    def clear_credentials(self):
-        """Limpar credenciais salvas"""
-        try:
-            cred_file = Path.home() / '.primotex_credentials.json'
-            if cred_file.exists():
-                cred_file.unlink()
-                print("Credenciais removidas")
-        except Exception as e:
-            print(f"Erro ao remover credenciais: {e}")
     
     def run(self):
         """Executar a aplicação"""
         
         try:
             self.root.mainloop()
-            
-            # Após fechar janela de login, verificar se deve abrir dashboard
-            if self._open_dashboard:
-                self.root.destroy()
-                self.open_dashboard()
-            
             return self.user_data
         except KeyboardInterrupt:
             return None
         finally:
             try:
-                if self.root.winfo_exists():
-                    self.root.destroy()
+                self.root.destroy()
             except Exception as e:
-                print(
-                    f"Warning: Erro ao destruir janela de login: {e}"
-                )
-
+                print(f"Warning: Erro ao destruir janela de login: {e}")
 
 # =======================================
 # FUNÇÃO PRINCIPAL
 # =======================================
-
 
 def main():
     """Função principal para testar"""
@@ -1092,11 +996,9 @@ def main():
         print(f"👤 Usuário: {user.get('username')}")
         print(f"📧 Email: {user.get('email')}")
         print(f"🎭 Perfil: {user.get('perfil')}")
-        token = user_data.get('access_token', '')[:30]
-        print(f"🔑 Token: {token}...")
+        print(f"🔑 Token: {user_data.get('access_token', '')[:30]}...")
     else:
         print("\n❌ Login cancelado ou falhou")
-
 
 if __name__ == "__main__":
     main()

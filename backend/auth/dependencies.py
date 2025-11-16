@@ -22,15 +22,15 @@ from backend.auth.jwt_handler import decode_access_token
 # CONFIGURAÇÃO DA SEGURANÇA
 # =======================================
 
-# Esquema de segurança Bearer Token
-security = HTTPBearer()
+# Esquema de segurança Bearer Token (auto_error=False para controle manual de erros)
+security = HTTPBearer(auto_error=False)
 
 # =======================================
 # DEPENDÊNCIAS DE AUTENTICAÇÃO
 # =======================================
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_database)
 ) -> Usuario:
     """
@@ -52,6 +52,14 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    # Verificar se credenciais foram fornecidas
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token de acesso não fornecido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     try:
         # Decodificar token
         token = credentials.credentials
@@ -64,6 +72,8 @@ def get_current_user(
         if user_id is None:
             raise credentials_exception
             
+    except HTTPException:
+        raise
     except Exception:
         raise credentials_exception
     

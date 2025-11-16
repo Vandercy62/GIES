@@ -179,10 +179,10 @@ app.include_router(colaborador_router, prefix="/api/v1", tags=["Colaboradores"])
 app.include_router(os_router, prefix="/api/v1", tags=["Ordem de Serviço"])
 
 # Incluir router de agendamento (NOVO - Fase 3)
-app.include_router(agendamento_router, tags=["Agendamento"])
+app.include_router(agendamento_router, prefix="/api/v1", tags=["Agendamento"])
 
 # Incluir router financeiro (NOVO - Fase 3)
-app.include_router(financeiro_router, tags=["Financeiro"])
+app.include_router(financeiro_router, prefix="/api/v1", tags=["Financeiro"])
 
 # Incluir router de comunicação (NOVO - Fase 3)
 from backend.api.routers.comunicacao_router import router as comunicacao_router

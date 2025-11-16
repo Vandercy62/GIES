@@ -18,18 +18,19 @@ from decimal import Decimal
 class ProdutoBase(BaseModel):
     """Schema base para produtos"""
     codigo: Optional[str] = Field(None, max_length=50)
-    nome: str = Field(..., min_length=2, max_length=150)
-    descricao: Optional[str] = None
+    descricao: str = Field(..., min_length=2, max_length=200)
     categoria: str = Field(..., max_length=100)
     unidade_medida: str = Field(..., max_length=10)
     preco_custo: Optional[Decimal] = Field(None, ge=0)
     preco_venda: Optional[Decimal] = Field(None, ge=0)
     margem_lucro: Optional[Decimal] = Field(None, ge=0)
-    estoque_atual: int = Field(default=0, ge=0)
-    estoque_minimo: int = Field(default=0, ge=0)
+    estoque_atual: Optional[int] = Field(None, ge=0)
+    estoque_minimo: Optional[int] = Field(None, ge=0)
+    estoque_maximo: Optional[int] = Field(None, ge=0)
+    localizacao_estoque: Optional[str] = Field(None, max_length=100)
     codigo_barras: Optional[str] = Field(None, max_length=50)
     observacoes: Optional[str] = None
-    ativo: bool = True
+    status: Optional[str] = Field("Ativo", max_length=50)
 
 
 class ProdutoCreate(ProdutoBase):
@@ -40,8 +41,7 @@ class ProdutoCreate(ProdutoBase):
 class ProdutoUpdate(BaseModel):
     """Schema para atualização de produto"""
     codigo: Optional[str] = Field(None, max_length=50)
-    nome: Optional[str] = Field(None, min_length=2, max_length=150)
-    descricao: Optional[str] = None
+    descricao: Optional[str] = Field(None, min_length=2, max_length=200)
     categoria: Optional[str] = Field(None, max_length=100)
     unidade_medida: Optional[str] = Field(None, max_length=10)
     preco_custo: Optional[Decimal] = Field(None, ge=0)
@@ -49,16 +49,23 @@ class ProdutoUpdate(BaseModel):
     margem_lucro: Optional[Decimal] = Field(None, ge=0)
     estoque_atual: Optional[int] = Field(None, ge=0)
     estoque_minimo: Optional[int] = Field(None, ge=0)
+    estoque_maximo: Optional[int] = Field(None, ge=0)
+    localizacao_estoque: Optional[str] = Field(None, max_length=100)
     codigo_barras: Optional[str] = Field(None, max_length=50)
     observacoes: Optional[str] = None
-    ativo: Optional[bool] = None
+    status: Optional[str] = Field(None, max_length=50)
 
 
 class ProdutoResponse(ProdutoBase):
     """Schema para resposta de produto"""
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    
+    @property
+    def ativo(self) -> bool:
+        """Compatibilidade: retorna True se status é Ativo"""
+        return self.status == "Ativo"
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,7 +73,7 @@ class ProdutoResponse(ProdutoBase):
 class FiltrosProduto(BaseModel):
     """Schema para filtros de busca"""
     categoria: Optional[str] = None
-    ativo: Optional[bool] = None
+    status: Optional[str] = None
     busca: Optional[str] = None
 
 

@@ -63,7 +63,7 @@ async def criar_produto(
         db.commit()
         db.refresh(db_produto)
         
-        logger.info(f"Produto {db_produto.nome} criado")
+        logger.info(f"Produto {db_produto.descricao} criado")
         return db_produto
         
     except HTTPException:
@@ -93,8 +93,8 @@ async def listar_produtos(
         if filtros.categoria:
             query = query.filter(Produto.categoria == filtros.categoria)
             
-        if filtros.ativo is not None:
-            query = query.filter(Produto.ativo == filtros.ativo)
+        if filtros.status is not None:
+            query = query.filter(Produto.status == filtros.status)
         
         # Total
         total = query.count()
@@ -109,6 +109,8 @@ async def listar_produtos(
             limit=limit
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao listar produtos: {e}")
         raise HTTPException(
@@ -171,7 +173,7 @@ async def atualizar_produto(
         db.commit()
         db.refresh(produto)
         
-        logger.info(f"Produto {produto.nome} atualizado")
+        logger.info(f"Produto {produto.descricao} atualizado")
         return produto
         
     except HTTPException:
@@ -202,10 +204,10 @@ async def deletar_produto(
             )
         
         # Soft delete
-        produto.ativo = False
+        produto.status = "Inativo"
         db.commit()
         
-        logger.info(f"Produto {produto.nome} deletado")
+        logger.info(f"Produto {produto.descricao} deletado")
         
     except HTTPException:
         raise

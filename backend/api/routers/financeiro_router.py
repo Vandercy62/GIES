@@ -43,9 +43,9 @@ from backend.models.financeiro_model import (
     ContaReceber, ContaPagar, MovimentacaoFinanceira,
     CategoriaFinanceira, FluxoCaixa
 )
-from backend.models.user_model import Usuario
 
 # Imports dos models relacionados
+from backend.models.user_model import Usuario
 # from backend.models.ordem_servico_model import OrdemServico
 # from backend.models.cliente_models import Cliente
 
@@ -55,7 +55,7 @@ from backend.auth.dependencies import get_current_user
 
 # Configuração do router
 router = APIRouter(
-    prefix="/api/v1/financeiro",
+    prefix="/financeiro",
     tags=["financeiro"],
     dependencies=[Depends(get_current_user)]
 )
@@ -124,21 +124,21 @@ def _calcular_total_contas_pagar(db: Session, filtros: Optional[Dict] = None) ->
 async def listar_contas_receber(
     skip: int = Query(0, ge=0, description="Número de registros para pular"),
     limit: int = Query(100, ge=1, le=1000, description="Número máximo de registros"),
-    status: Optional[StatusFinanceiro] = Query(None, description="Filtrar por status"),
+    status_param: Optional[StatusFinanceiro] = Query(None, description="Filtrar por status"),
     cliente_id: Optional[int] = Query(None, description="Filtrar por cliente"),
     data_inicio: Optional[date] = Query(None, description=DATA_INICIO_DESC),
     data_fim: Optional[date] = Query(None, description=DATA_FIM_DESC),
     vencidas: Optional[bool] = Query(None, description="Apenas contas vencidas"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: Usuario = Depends(get_current_user)
 ):
     """Lista contas a receber com filtros avançados"""
     try:
         query = db.query(ContaReceber).filter(ContaReceber.ativo == True)
         
         # Aplicar filtros
-        if status_filtro:
-            query = query.filter(ContaReceber.status == status_filtro)
+        if status_param:
+            query = query.filter(ContaReceber.status == status_param)
         
         if cliente_id:
             query = query.filter(ContaReceber.cliente_id == cliente_id)
@@ -195,7 +195,7 @@ async def criar_conta_receber(
         
         # Criar conta
         db_conta = ContaReceber(**conta.model_dump())
-        db_conta.usuario_criacao_id = current_user["id"]
+        db_conta.usuario_criacao_id = current_user.id
         
         db.add(db_conta)
         db.commit()
@@ -382,7 +382,7 @@ async def baixar_conta_receber(
 async def listar_contas_pagar(
     skip: int = Query(0, ge=0, description="Número de registros para pular"),
     limit: int = Query(100, ge=1, le=1000, description="Número máximo de registros"),
-    status: Optional[StatusFinanceiro] = Query(None, description="Filtrar por status"),
+    status_param: Optional[StatusFinanceiro] = Query(None, description="Filtrar por status"),
     fornecedor: Optional[str] = Query(None, description="Filtrar por fornecedor"),
     data_inicio: Optional[date] = Query(None, description=DATA_INICIO_DESC),
     data_fim: Optional[date] = Query(None, description=DATA_FIM_DESC),
@@ -395,8 +395,8 @@ async def listar_contas_pagar(
         query = db.query(ContaPagar).filter(ContaPagar.ativo == True)
         
         # Aplicar filtros
-        if status_filtro:
-            query = query.filter(ContaPagar.status == status_filtro)
+        if status_param:
+            query = query.filter(ContaPagar.status == status_param)
         
         if fornecedor:
             query = query.filter(ContaPagar.fornecedor.ilike(f"%{fornecedor}%"))

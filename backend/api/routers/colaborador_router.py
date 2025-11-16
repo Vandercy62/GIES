@@ -76,85 +76,92 @@ async def listar_colaboradores(
     - status: Filtrar por status
     - ativo: Filtrar por ativo/inativo
     """
-    
-    # Query base com joins otimizados
-    query = db.query(Colaborador).options(
-        joinedload(Colaborador.cargo),
-        joinedload(Colaborador.departamento),
-        joinedload(Colaborador.usuario)
-    )
-    
-    # Aplicar filtros
-    if filtros.search:
-        search_term = f"%{filtros.search}%"
-        query = query.filter(
-            or_(
-                Colaborador.nome_completo.ilike(search_term),
-                Colaborador.matricula.ilike(search_term),
-                Colaborador.cpf.ilike(search_term),
-                Colaborador.email_corporativo.ilike(search_term)
+    try:
+        # Query base com joins otimizados
+        query = db.query(Colaborador).options(
+            joinedload(Colaborador.cargo),
+            joinedload(Colaborador.departamento),
+            joinedload(Colaborador.usuario)
+        )
+        
+        # Aplicar filtros
+        if filtros.search:
+            search_term = f"%{filtros.search}%"
+            query = query.filter(
+                or_(
+                    Colaborador.nome_completo.ilike(search_term),
+                    Colaborador.matricula.ilike(search_term),
+                    Colaborador.cpf.ilike(search_term),
+                    Colaborador.email_corporativo.ilike(search_term)
+                )
             )
+        
+        if filtros.departamento_id:
+            query = query.filter(
+                Colaborador.departamento_id == filtros.departamento_id
+            )
+        
+        if filtros.cargo_id:
+            query = query.filter(Colaborador.cargo_id == filtros.cargo_id)
+        
+        if filtros.status:
+            query = query.filter(Colaborador.status == filtros.status)
+        
+        if filtros.tipo_contrato:
+            query = query.filter(
+                Colaborador.tipo_contrato == filtros.tipo_contrato
+            )
+        
+        if filtros.ativo is not None:
+            query = query.filter(Colaborador.ativo == filtros.ativo)
+        
+        if filtros.data_admissao_inicio:
+            query = query.filter(
+                Colaborador.data_admissao >= filtros.data_admissao_inicio
+            )
+        
+        if filtros.data_admissao_fim:
+            query = query.filter(
+                Colaborador.data_admissao <= filtros.data_admissao_fim
+            )
+        
+        if filtros.tem_superior is not None:
+            if filtros.tem_superior:
+                query = query.filter(Colaborador.superior_direto_id.isnot(None))
+            else:
+                query = query.filter(Colaborador.superior_direto_id.is_(None))
+        
+        # Contar total
+        total = query.count()
+        
+        # Aplicar paginação
+        offset = (paginacao.page - 1) * paginacao.size
+        # Buscar colaboradores com paginação
+        colaboradores = (
+            query
+            .order_by(Colaborador.nome_completo)
+            .offset(offset)
+            .limit(paginacao.size)
+            .all()
         )
-    
-    if filtros.departamento_id:
-        query = query.filter(
-            Colaborador.departamento_id == filtros.departamento_id
+        
+        # Calcular páginas
+        pages = (total + paginacao.size - 1) // paginacao.size
+        
+        return ColaboradorListagem(
+            items=colaboradores,
+            total=total,
+            page=paginacao.page,
+            size=paginacao.size,
+            pages=pages
         )
-    
-    if filtros.cargo_id:
-        query = query.filter(Colaborador.cargo_id == filtros.cargo_id)
-    
-    if filtros.status:
-        query = query.filter(Colaborador.status == filtros.status)
-    
-    if filtros.tipo_contrato:
-        query = query.filter(
-            Colaborador.tipo_contrato == filtros.tipo_contrato
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao listar colaboradores: {str(e)}"
         )
-    
-    if filtros.ativo is not None:
-        query = query.filter(Colaborador.ativo == filtros.ativo)
-    
-    if filtros.data_admissao_inicio:
-        query = query.filter(
-            Colaborador.data_admissao >= filtros.data_admissao_inicio
-        )
-    
-    if filtros.data_admissao_fim:
-        query = query.filter(
-            Colaborador.data_admissao <= filtros.data_admissao_fim
-        )
-    
-    if filtros.tem_superior is not None:
-        if filtros.tem_superior:
-            query = query.filter(Colaborador.superior_direto_id.isnot(None))
-        else:
-            query = query.filter(Colaborador.superior_direto_id.is_(None))
-    
-    # Contar total
-    total = query.count()
-    
-    # Aplicar paginação
-    offset = (paginacao.page - 1) * paginacao.size
-    # Buscar colaboradores com paginação
-    colaboradores = (
-        query
-        .order_by(Colaborador.nome_completo)
-        .offset(offset)
-        .limit(paginacao.size)
-        .all()
-    )
-    
-    # Calcular páginas
-    pages = (total + paginacao.size - 1) // paginacao.size
-    
-    return ColaboradorListagem(
-        items=colaboradores,
-        total=total,
-        page=paginacao.page,
-        size=paginacao.size,
-        pages=pages
-    )
 
 
 @router.post("/",
@@ -220,7 +227,7 @@ async def criar_colaborador(
     # Criar colaborador
     colaborador_dict = colaborador_data.dict()
     colaborador_dict['cpf'] = cpf_limpo
-    colaborador_dict['cadastrado_por'] = current_user.id
+    colaborador_dict['cadastrado_por'] = current_user["id"]
     
     colaborador = Colaborador(**colaborador_dict)
     

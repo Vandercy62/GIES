@@ -44,6 +44,9 @@ class DashboardPrincipal:
         self.create_user_bar()
         self.create_main_content()
         self.load_data()
+        
+        # Iniciar mainloop
+        self.root.mainloop()
     
     def setup_window(self):
         """Configurar janela principal"""
@@ -75,7 +78,7 @@ class DashboardPrincipal:
         
         user_info = get_current_user_info()
         username = user_info.get('username', 'Usuário')
-        user_type = user_info.get('user_type', 'N/A')
+        user_type = user_info.get('user_type') or 'Usuário'
         
         # Ícone + Nome
         user_label = tk.Label(
@@ -90,7 +93,7 @@ class DashboardPrincipal:
         # Perfil
         perfil_label = tk.Label(
             info_frame,
-            text=f"📋 {user_type.title()}",
+            text=f"📋 {user_type.title() if user_type else 'Usuário'}",
             bg='#2c3e50',
             fg='#ecf0f1',
             font=('Arial', 10)
@@ -639,8 +642,10 @@ class DashboardPrincipal:
     def abrir_produtos(self):
         """Abrir módulo de produtos"""
         try:
-            from frontend.desktop.produtos_window import ProdutosWindow
-            ProdutosWindow()  # Usa SessionManager, não precisa de user_data
+            from frontend.desktop.produtos_window_completo import (
+                ProdutosWindowCompleto
+            )
+            ProdutosWindowCompleto(self.root)  # Usa SessionManager automático
         except ImportError as e:
             messagebox.showwarning("Módulo não disponível", f"Produtos: {e}")
         except Exception as e:

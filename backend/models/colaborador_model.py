@@ -55,13 +55,13 @@ class TipoContrato(enum.Enum):
 
 
 class StatusColaborador(enum.Enum):
-    """Status do colaborador na empresa"""
-    ATIVO = "Ativo"
-    INATIVO = "Inativo"
-    FERIAS = "Férias"
-    LICENCA = "Licença"
-    AFASTADO = "Afastado"
-    DEMITIDO = "Demitido"
+    """Status do colaborador"""
+    ATIVO = "ATIVO"
+    INATIVO = "INATIVO"
+    FERIAS = "FERIAS"
+    LICENCA = "LICENCA"
+    AFASTADO = "AFASTADO"
+    DEMITIDO = "DEMITIDO"
 
 
 class TipoDocumento(enum.Enum):

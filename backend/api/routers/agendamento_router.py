@@ -61,7 +61,7 @@ CONFIG_NAO_ENCONTRADA_MSG = "Configuração não encontrada"
 
 # Criar router
 router = APIRouter(
-    prefix="/api/v1/agendamento",
+    prefix="/agendamento",
     tags=["Agendamento"],
     responses={404: {"description": "Not found"}}
 )
