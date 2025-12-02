@@ -30,25 +30,25 @@ from backend.schemas.ordem_servico_schemas import (
     OrdemServicoResponse,  # Usado em endpoints GET/PUT
     ResumoOrdemServico,
     ListagemOrdemServico,
-    
+
     # Schemas de fases
     FaseOSUpdate,
     FaseOSResponse,
-    
+
     # Schemas específicos
     VisitaTecnicaCreate,
     VisitaTecnicaResponse,
     OrcamentoCreate,
     OrcamentoResponse,
-    
+
     # Schemas de ações
     MudancaFaseRequest,
-    
+
     # Schemas de relatórios
     EstatisticasOS,
     DashboardOS,
     HistoricoMudanca,
-    
+
     # Enums
     StatusOS,
     FaseOSEnum,
@@ -84,10 +84,10 @@ def gerar_numero_os(db: Session) -> str:
     """Gera próximo número de OS disponível"""
     # Busca último número
     ultima_os = db.query(OrdemServico).order_by(desc(OrdemServico.id)).first()
-    
+
     if not ultima_os:
         return "OS-2025-001"
-    
+
     # Extrai número da última OS
     try:
         partes = ultima_os.numero_os.split('-')
@@ -96,7 +96,7 @@ def gerar_numero_os(db: Session) -> str:
             return f"OS-2025-{numero:03d}"
     except (ValueError, IndexError):
         pass
-    
+
     # Fallback: conta registros
     total = db.query(OrdemServico).count()
     return f"OS-2025-{total + 1:03d}"
@@ -106,10 +106,10 @@ def calcular_progresso_os(os_obj: OrdemServico) -> float:
     """Calcula percentual de progresso da OS"""
     if not os_obj.fases:
         return 0.0
-    
+
     total_fases = len(os_obj.fases)
     fases_concluidas = sum(1 for fase in os_obj.fases if fase.status == StatusFase.CONCLUIDA)
-    
+
     return (fases_concluidas / total_fases) * 100 if total_fases > 0 else 0.0
 
 
@@ -125,7 +125,7 @@ async def criar_ordem_servico(
 ):
     """
     Cria uma nova Ordem de Serviço
-    
+
     - **numero_os**: Gerado automaticamente se não fornecido
     - **cliente_id**: Deve existir na base de dados
     - **titulo**: Título descritivo da OS
@@ -138,11 +138,11 @@ async def criar_ordem_servico(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cliente com ID {os_data.cliente_id} não encontrado"
         )
-    
+
     # Gerar número da OS se não fornecido
     if not os_data.numero_os:
         os_data.numero_os = gerar_numero_os(db)
-    
+
     # Verificar se número já existe
     os_existente = db.query(OrdemServico).filter(
         OrdemServico.numero_os == os_data.numero_os
@@ -152,7 +152,7 @@ async def criar_ordem_servico(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Número de OS {os_data.numero_os} já existe"
         )
-    
+
     # Criar OS - MAPEAMENTO SCHEMA→MODELO
     os_obj = OrdemServico(
         # Campos básicos
@@ -161,40 +161,40 @@ async def criar_ordem_servico(
         tipo_servico=os_data.tipo_servico.value,
         categoria="Comercial",  # Valor padrão (campo obrigatório no modelo)
         prioridade=os_data.prioridade.value,
-        
+
         # Status
         fase_atual=1,  # Fase 1 - Criação
         status_geral="Aberta",
-        
+
         # Datas
         # data_abertura usa server_default
         data_prevista_conclusao=os_data.data_prazo,
         prazo_orcamento=os_data.data_prazo,
-        
+
         # Responsáveis
         usuario_abertura=os_data.usuario_criacao,
-        
+
         # Valores
         valor_orcamento=os_data.valor_estimado or 0.00,
         valor_final=os_data.valor_final or 0.00,
-        
+
         # Endereço do serviço
         endereco_execucao=os_data.endereco_servico,
         cep_execucao=os_data.cep_servico,
         cidade_execucao=os_data.cidade_servico,
         estado_execucao=os_data.estado_servico,
-        
+
         # Observações (mapear titulo+descricao para observacoes_abertura)
         observacoes_abertura=f"{os_data.titulo}\n\n{os_data.descricao}\n\n{os_data.observacoes or ''}"
     )
-    
+
     db.add(os_obj)
     db.commit()
     db.refresh(os_obj)
-    
+
     # Criar fases iniciais - ✅ REABILITADO
     criar_fases_iniciais(int(os_obj.id), db)
-    
+
     # Retornar dict simples (response_model incompatível - ver SINCRONIZACAO_SCHEMA_MODEL.md)
     return {
         "id": os_obj.id,
@@ -223,7 +223,7 @@ async def listar_ordens_servico(
 ):
     """
     Lista Ordens de Serviço com filtros e paginação
-    
+
     - **skip**: Número de registros para pular (paginação)
     - **limit**: Limite de registros por página (máx 100)
     - **cliente_id**: Filtrar por cliente específico
@@ -233,33 +233,33 @@ async def listar_ordens_servico(
     try:
         # Query base
         query = db.query(OrdemServico)
-        
+
         # Aplicar filtros
         if cliente_id:
             query = query.filter(OrdemServico.cliente_id == cliente_id)
-        
+
         if status:
             query = query.filter(OrdemServico.status == status)
-        
+
         if prioridade:
             query = query.filter(OrdemServico.prioridade == prioridade)
-        
+
         if urgente is not None:
             query = query.filter(OrdemServico.urgente == urgente)
-        
+
         if numero_os:
             query = query.filter(OrdemServico.numero_os.ilike(f"%{numero_os}%"))
-        
+
         # Ordenação
         order_field = getattr(OrdemServico, order_by, OrdemServico.created_at)
         if order_desc:
             query = query.order_by(desc(order_field))
         else:
             query = query.order_by(asc(order_field))
-        
+
         # Paginação  
         ordens_servico = query.offset(skip).limit(limit).all()
-        
+
         # Converter para dict simples para evitar erro de validação
         return [
             {
@@ -276,7 +276,7 @@ async def listar_ordens_servico(
             }
             for os in ordens_servico
         ]
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -291,16 +291,16 @@ async def obter_ordem_servico(
 ):
     """
     Obtém uma Ordem de Serviço específica por ID
-    
+
     - **os_id**: ID da Ordem de Serviço
     """
     os_obj = get_ordem_servico_or_404(os_id, db)
-    
+
     # Calcular dados derivados
     os_obj.progresso_percentual = calcular_progresso_os(os_obj)
     os_obj.total_fases = 7
     os_obj.fases_concluidas = sum(1 for fase in os_obj.fases if fase.status == StatusFase.CONCLUIDA)
-    
+
     return os_obj
 
 
@@ -312,32 +312,32 @@ async def atualizar_ordem_servico(
 ):
     """
     Atualiza uma Ordem de Serviço existente
-    
+
     - **os_id**: ID da Ordem de Serviço
     - Apenas campos fornecidos serão atualizados
     """
     os_obj = get_ordem_servico_or_404(os_id, db)
-    
+
     # Atualizar campos fornecidos
     update_data = os_data.dict(exclude_unset=True)
-    
+
     for field, value in update_data.items():
         if field == "usuario_ultima_alteracao":
             continue  # Tratar separadamente
-        
+
         if hasattr(os_obj, field):
             if field in ["tipo_servico", "prioridade"] and hasattr(value, 'value'):
                 setattr(os_obj, field, value.value)
             else:
                 setattr(os_obj, field, value)
-    
+
     # Definir usuário de alteração
     os_obj.usuario_ultima_alteracao = os_data.usuario_ultima_alteracao
     setattr(os_obj, "updated_at", datetime.now())
-    
+
     db.commit()
     db.refresh(os_obj)
-    
+
     return os_obj
 
 
@@ -348,19 +348,19 @@ async def deletar_ordem_servico(
 ):
     """
     Deleta uma Ordem de Serviço
-    
+
     - **os_id**: ID da Ordem de Serviço
     - ⚠️ **Atenção**: Esta ação é irreversível
     """
     os_obj = get_ordem_servico_or_404(os_id, db)
-    
+
     # Verificar se pode ser deletada
     if os_obj.status in [StatusOS.EM_EXECUCAO.value, StatusOS.CONCLUIDA.value]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Não é possível deletar OS com status {os_obj.status}"
         )
-    
+
     db.delete(os_obj)
     db.commit()
 
@@ -380,7 +380,7 @@ def criar_fases_iniciais(os_id: int, db: Session):
         {"numero": 6, "nome": FaseOSEnum.ENTREGA, "descricao": "Entrega e verificação"},
         {"numero": 7, "nome": FaseOSEnum.FINALIZACAO, "descricao": "Finalização e documentação"}
     ]
-    
+
     for fase_data in fases:
         fase = FaseOS(
             ordem_servico_id=os_id,
@@ -391,7 +391,7 @@ def criar_fases_iniciais(os_id: int, db: Session):
             obrigatoria=True
         )
         db.add(fase)
-    
+
     db.commit()
 
 
@@ -402,12 +402,12 @@ async def listar_fases_os(
 ):
     """
     Lista todas as fases de uma OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     # Buscar fases
     fases = db.query(FaseOS).filter(FaseOS.ordem_servico_id == os_id).all()
     return fases
@@ -422,23 +422,23 @@ async def atualizar_fase_os(
 ):
     """
     Atualiza uma fase específica da OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     - **fase_id**: ID da fase
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     fase = db.query(FaseOS).filter(
         and_(FaseOS.id == fase_id, FaseOS.ordem_servico_id == os_id)
     ).first()
-    
+
     if not fase:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Fase {fase_id} não encontrada na OS {os_id}"
         )
-    
+
     # Atualizar campos
     update_data = fase_data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -446,13 +446,13 @@ async def atualizar_fase_os(
             continue
         if hasattr(fase, field):
             setattr(fase, field, value)
-    
+
     fase.usuario_ultima_alteracao = fase_data.usuario_alteracao
     setattr(fase, "updated_at", datetime.now())
-    
+
     db.commit()
     db.refresh(fase)
-    
+
     return fase
 
 
@@ -464,13 +464,13 @@ async def mudar_fase_os(
 ):
     """
     Muda a fase atual da OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     - **nova_fase**: Nova fase da OS
     - **observacoes**: Observações da mudança
     """
     os_obj = get_ordem_servico_or_404(os_id, db)
-    
+
     # Validar se a fase existe
     fase = db.query(FaseOS).filter(
         and_(
@@ -478,13 +478,13 @@ async def mudar_fase_os(
             FaseOS.nome_fase == mudanca.nova_fase.value
         )
     ).first()
-    
+
     if not fase:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Fase {mudanca.nova_fase.value} não encontrada"
         )
-    
+
     # Atualizar OS
     setattr(os_obj, "fase_atual", mudanca.nova_fase.value)
     os_obj.usuario_ultima_alteracao = mudanca.usuario_responsavel
@@ -526,25 +526,25 @@ async def agendar_visita_tecnica(
 ):
     """
     Agenda uma visita técnica para a OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     - **data_agendada**: Data e hora da visita
     - **tecnico_responsavel**: Técnico que fará a visita
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     # Verificar se já existe visita
     visita_existente = db.query(VisitaTecnica).filter(
         VisitaTecnica.ordem_servico_id == os_id
     ).first()
-    
+
     if visita_existente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Já existe uma visita técnica agendada para esta OS"
         )
-    
+
     # Criar visita técnica
     visita = VisitaTecnica(
         ordem_servico_id=os_id,
@@ -558,11 +558,11 @@ async def agendar_visita_tecnica(
         usuario_agendamento=visita_data.usuario_agendamento,
         status_execucao="Agendada"
     )
-    
+
     db.add(visita)
     db.commit()
     db.refresh(visita)
-    
+
     return visita
 
 
@@ -573,22 +573,22 @@ async def obter_visita_tecnica(
 ):
     """
     Obtém a visita técnica de uma OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     visita = db.query(VisitaTecnica).filter(
         VisitaTecnica.ordem_servico_id == os_id
     ).first()
-    
+
     if not visita:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Visita técnica não encontrada para esta OS"
         )
-    
+
     return visita
 
 
@@ -604,14 +604,14 @@ async def criar_orcamento(
 ):
     """
     Cria um orçamento para a OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     - **itens**: Lista de itens do orçamento
     - **valor_total**: Valor total do orçamento
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     # Criar orçamento
     orcamento = Orcamento(
         ordem_servico_id=os_id,
@@ -632,11 +632,11 @@ async def criar_orcamento(
         usuario_criacao=orcamento_data.usuario_criacao,
         status_orcamento="Elaborado"
     )
-    
+
     db.add(orcamento)
     db.commit()
     db.refresh(orcamento)
-    
+
     return orcamento
 
 
@@ -647,22 +647,22 @@ async def obter_orcamento(
 ):
     """
     Obtém o orçamento de uma OS
-    
+
     - **os_id**: ID da Ordem de Serviço
     """
     # Verificar se OS existe
     get_ordem_servico_or_404(os_id, db)
-    
+
     orcamento = db.query(Orcamento).filter(
         Orcamento.ordem_servico_id == os_id
     ).first()
-    
+
     if not orcamento:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Orçamento não encontrado para esta OS"
         )
-    
+
     return orcamento
 
 
@@ -674,37 +674,37 @@ async def obter_orcamento(
 async def obter_estatisticas_os(db: Session = Depends(get_db)):
     """
     Obtém estatísticas gerais das OS
-    
+
     - Total de OS
     - Distribuição por status, fase, prioridade
     - Métricas de performance
     """
     total_os = db.query(OrdemServico).count()
-    
+
     # Estatísticas por status
     por_status = {}
     for status_enum in StatusOS:
         count = db.query(OrdemServico).filter(OrdemServico.status == status_enum.value).count()
         por_status[status_enum.value] = count
-    
+
     # Estatísticas por fase
     por_fase = {}
     for fase_enum in FaseOSEnum:
         count = db.query(OrdemServico).filter(OrdemServico.fase_atual == fase_enum.value).count()
         por_fase[fase_enum.value] = count
-    
+
     # Estatísticas por prioridade
     por_prioridade = {}
     for prioridade_enum in PrioridadeOS:
         count = db.query(OrdemServico).filter(OrdemServico.prioridade == prioridade_enum.value).count()
         por_prioridade[prioridade_enum.value] = count
-    
+
     # Estatísticas por tipo
     por_tipo = {}
     for tipo_enum in TipoOS:
         count = db.query(OrdemServico).filter(OrdemServico.tipo_servico == tipo_enum.value).count()
         por_tipo[tipo_enum.value] = count
-    
+
     return EstatisticasOS(
         total_os=total_os,
         por_status=por_status,
@@ -726,23 +726,23 @@ async def obter_historico_os(
 ):
     """
     Obter histórico completo de mudanças da OS
-    
+
     Retorna lista vazia temporariamente (OSHistorico modelo comentado)
     """
     try:
         os_obj = db.query(OrdemServico).filter(
             OrdemServico.id == os_id
         ).first()
-        
+
         if not os_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ordem de serviço não encontrada"
             )
-        
+
         # Temporariamente retornando lista vazia (OSHistorico comentado)
         return []
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -759,7 +759,7 @@ async def obter_dashboard_detalhado(
 ):
     """
     Obter estatísticas detalhadas para dashboard de OS
-    
+
     Retorna:
     - OS urgentes (prioridade urgente ou alta)
     - OS atrasadas (prazo vencido)
@@ -776,7 +776,7 @@ async def obter_dashboard_detalhado(
                 "AGUARDANDO_APROVACAO", "EM_EXECUCAO"
             ])
         ).limit(10).all()
-        
+
         # OS atrasadas (prazo vencido)
         hoje = datetime.now()
         os_atrasadas = db.query(OrdemServico).filter(
@@ -786,7 +786,7 @@ async def obter_dashboard_detalhado(
                 "AGUARDANDO_APROVACAO", "EM_EXECUCAO"
             ])
         ).limit(10).all()
-        
+
         # OS de hoje (criadas hoje)
         inicio_hoje = hoje.replace(
             hour=0, minute=0, second=0, microsecond=0
@@ -794,7 +794,7 @@ async def obter_dashboard_detalhado(
         os_hoje = db.query(OrdemServico).filter(
             OrdemServico.data_abertura >= inicio_hoje
         ).limit(10).all()
-        
+
         # Fases pendentes (quantidade por fase nas OS abertas)
         fases_pendentes = {}
         for fase_num in range(1, 8):
@@ -806,10 +806,10 @@ async def obter_dashboard_detalhado(
                 ])
             ).count()
             fases_pendentes[str(fase_num)] = count
-        
+
         # Estatísticas gerais
         total_os = db.query(OrdemServico).count()
-        
+
         # OS por status
         por_status = {}
         for status_item in [
@@ -821,7 +821,7 @@ async def obter_dashboard_detalhado(
                 OrdemServico.status == status_item
             ).count()
             por_status[status_item] = count
-        
+
         # OS por fase
         por_fase = {}
         for fase in range(1, 8):
@@ -829,7 +829,7 @@ async def obter_dashboard_detalhado(
                 OrdemServico.fase_atual == fase
             ).count()
             por_fase[f"fase_{fase}"] = count
-        
+
         # OS por prioridade
         por_prioridade = {}
         for prioridade in ["baixa", "normal", "alta", "urgente"]:
@@ -837,7 +837,7 @@ async def obter_dashboard_detalhado(
                 OrdemServico.prioridade == prioridade
             ).count()
             por_prioridade[prioridade] = count
-        
+
         # Valor total pendente
         valor_total = db.query(
             func.sum(OrdemServico.valor_total)
@@ -850,7 +850,7 @@ async def obter_dashboard_detalhado(
         valor_total_pendente = (
             Decimal(str(valor_total)) if valor_total else None
         )
-        
+
         # Estatísticas consolidadas
         estatisticas = EstatisticasOS(
             total_os=total_os,
@@ -860,7 +860,7 @@ async def obter_dashboard_detalhado(
             por_tipo={},
             valor_total_pendente=valor_total_pendente
         )
-        
+
         return DashboardOS(
             estatisticas=estatisticas,
             os_urgentes=[
@@ -874,7 +874,7 @@ async def obter_dashboard_detalhado(
             ],
             fases_pendentes=fases_pendentes
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -895,13 +895,13 @@ async def obter_estatisticas_periodo(
 ):
     """
     Obter estatísticas gerais de OS com filtro de período
-    
+
     Permite filtrar estatísticas por período específico.
     Se não informado período, retorna estatísticas de todas as OS.
     """
     try:
         query = db.query(OrdemServico)
-        
+
         # Filtrar por período se fornecido
         if data_inicio:
             query = query.filter(
@@ -911,10 +911,10 @@ async def obter_estatisticas_periodo(
             query = query.filter(
                 OrdemServico.data_abertura <= data_fim
             )
-        
+
         # Estatísticas básicas
         total = query.count()
-        
+
         # OS por status
         por_status = {}
         for status_item in [
@@ -926,7 +926,7 @@ async def obter_estatisticas_periodo(
                 OrdemServico.status == status_item
             ).count()
             por_status[status_item] = count
-        
+
         # OS por fase
         por_fase = {}
         for fase in range(1, 8):
@@ -934,7 +934,7 @@ async def obter_estatisticas_periodo(
                 OrdemServico.fase_atual == fase
             ).count()
             por_fase[f"fase_{fase}"] = count
-        
+
         # OS por prioridade
         por_prioridade = {}
         for prioridade in ["baixa", "normal", "alta", "urgente"]:
@@ -942,7 +942,7 @@ async def obter_estatisticas_periodo(
                 OrdemServico.prioridade == prioridade
             ).count()
             por_prioridade[prioridade] = count
-        
+
         # Valor total pendente
         valor_total = query.filter(
             OrdemServico.status.in_([
@@ -953,7 +953,7 @@ async def obter_estatisticas_periodo(
         valor_total_pendente = (
             Decimal(str(valor_total)) if valor_total else None
         )
-        
+
         return EstatisticasOS(
             total_os=total,
             por_status=por_status,
@@ -962,9 +962,210 @@ async def obter_estatisticas_periodo(
             por_tipo={},
             valor_total_pendente=valor_total_pendente
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro interno: {str(e)}"
+        )
+
+
+# ================================
+# ENDPOINTS - CROQUI TÉCNICO
+# ================================
+
+@router.post("/{os_id}/croqui", status_code=status.HTTP_200_OK)
+async def salvar_croqui(
+    os_id: int,
+    croqui_data: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_operator)
+):
+    """
+    Salva dados do croqui técnico em ordem_servico.dados_croqui_json
+    
+    - **os_id**: ID da OS
+    - **croqui_data**: Objeto JSON com coordenadas e objetos desenhados
+    """
+    import json
+    
+    os_obj = get_ordem_servico_or_404(os_id, db)
+    
+    try:
+        # Validar estrutura básica
+        if "objetos" not in croqui_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Campo 'objetos' obrigatório"
+            )
+        
+        # Salvar JSON no banco
+        os_obj.dados_croqui_json = json.dumps(croqui_data, ensure_ascii=False)
+        db.commit()
+        
+        return {
+            "message": "Croqui salvo com sucesso",
+            "os_id": os_id,
+            "objetos_count": len(croqui_data.get("objetos", []))
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao salvar croqui: {str(e)}"
+        )
+
+
+@router.get("/{os_id}/croqui")
+async def carregar_croqui(
+    os_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Carrega dados do croqui técnico
+    
+    - **os_id**: ID da OS
+    
+    Retorna JSON com coordenadas e objetos desenhados
+    """
+    import json
+    
+    os_obj = get_ordem_servico_or_404(os_id, db)
+    
+    if not os_obj.dados_croqui_json:
+        return {
+            "os_id": os_id,
+            "objetos": [],
+            "message": "Nenhum croqui encontrado"
+        }
+    
+    try:
+        croqui_data = json.loads(os_obj.dados_croqui_json)
+        return croqui_data
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao decodificar dados do croqui"
+        )
+
+
+@router.post("/{os_id}/orcamento-json")
+async def salvar_orcamento_json(
+    os_id: int,
+    orcamento_data: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Salva dados do orçamento simplificado (JSON) da OS
+    
+    - **os_id**: ID da OS
+    - **orcamento_data**: JSON com itens, totais e timestamp
+    
+    Exemplo:
+    ```json
+    {
+        "os_id": 1,
+        "itens": [
+            {
+                "codigo": "P001",
+                "produto": "Forro PVC Branco",
+                "qtd": 50.5,
+                "unidade": "M²",
+                "preco_unit": 45.00,
+                "desconto": 10.0,
+                "total": 2047.50
+            }
+        ],
+        "subtotal": 2047.50,
+        "impostos": 348.08,
+        "total_geral": 2395.58,
+        "timestamp": "2025-11-18T10:30:00"
+    }
+    ```
+    """
+    import json
+    
+    os_obj = get_ordem_servico_or_404(os_id, db)
+    
+    try:
+        # Validar estrutura
+        if "itens" not in orcamento_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Campo 'itens' é obrigatório"
+            )
+        
+        if not isinstance(orcamento_data["itens"], list):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Campo 'itens' deve ser uma lista"
+            )
+        
+        # Salvar JSON no banco
+        os_obj.dados_orcamento_json = json.dumps(
+            orcamento_data,
+            ensure_ascii=False
+        )
+        
+        # Atualizar valor_orcamento (se fornecido)
+        if "total_geral" in orcamento_data:
+            from decimal import Decimal
+            os_obj.valor_orcamento = Decimal(
+                str(orcamento_data["total_geral"])
+            )
+        
+        db.commit()
+        
+        return {
+            "message": "Orçamento salvo com sucesso",
+            "os_id": os_id,
+            "itens_count": len(orcamento_data.get("itens", [])),
+            "total_geral": orcamento_data.get("total_geral", 0)
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao salvar orçamento: {str(e)}"
+        )
+
+
+@router.get("/{os_id}/orcamento-json")
+async def carregar_orcamento_json(
+    os_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Carrega dados do orçamento simplificado (JSON) da OS
+    
+    - **os_id**: ID da OS
+    
+    Retorna JSON com itens, totais e timestamp
+    """
+    import json
+    
+    os_obj = get_ordem_servico_or_404(os_id, db)
+    
+    if not os_obj.dados_orcamento_json:
+        return {
+            "os_id": os_id,
+            "itens": [],
+            "subtotal": 0,
+            "impostos": 0,
+            "total_geral": 0,
+            "message": "Nenhum orçamento encontrado"
+        }
+    
+    try:
+        orcamento_data = json.loads(os_obj.dados_orcamento_json)
+        return orcamento_data
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao decodificar dados do orçamento"
         )

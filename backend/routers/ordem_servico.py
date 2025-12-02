@@ -388,3 +388,151 @@ async def obter_ultimas_os(
     ).limit(limit).all()
     
     return os_list
+
+
+# ============================================================================
+# ENDPOINTS - MEDIÇÕES JSON (FASE 104 TAREFA 5)
+# ============================================================================
+
+@router.post("/{os_id}/medicoes-json", status_code=status.HTTP_201_CREATED)
+async def salvar_medicoes_json(
+    os_id: int,
+    dados: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Salva medições técnicas em formato JSON
+    
+    - Armazena no campo dados_medicoes_json da OS
+    - Suporta múltiplas medições (área, perímetro, linear, quantidade)
+    - Mantém histórico com timestamp
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    # Salvar JSON
+    os_obj.dados_medicoes_json = dados
+    db.commit()
+    
+    return {"message": "Medições salvas com sucesso", "os_id": os_id}
+
+
+@router.get("/{os_id}/medicoes-json")
+async def obter_medicoes_json(
+    os_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Retorna medições técnicas em formato JSON
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    if not os_obj.dados_medicoes_json:
+        raise HTTPException(status_code=404, detail="Nenhuma medição encontrada")
+    
+    return os_obj.dados_medicoes_json
+
+
+# =====================================================================
+# ENDPOINTS - MATERIAIS (FASE 104 TAREFA 6)
+# =====================================================================
+
+@router.post("/{os_id}/materiais-json", status_code=status.HTTP_201_CREATED)
+async def salvar_materiais_json(
+    os_id: int,
+    dados: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Salva controle de materiais em formato JSON
+    
+    Args:
+        os_id: ID da OS
+        dados: JSON com materiais aplicados/devolvidos
+        
+    Returns:
+        Mensagem de sucesso
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    os_obj.dados_materiais_json = dados
+    db.commit()
+    
+    return {"message": "Materiais salvos com sucesso", "os_id": os_id}
+
+
+@router.get("/{os_id}/materiais-json")
+async def obter_materiais_json(
+    os_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Retorna controle de materiais em formato JSON
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    if not os_obj.dados_materiais_json:
+        raise HTTPException(status_code=404, detail="Nenhum material encontrado")
+    
+    return os_obj.dados_materiais_json
+
+
+# =====================================================================
+# ENDPOINTS - EQUIPE (FASE 104 TAREFA 7)
+# =====================================================================
+
+@router.post("/{os_id}/equipe-json", status_code=status.HTTP_201_CREATED)
+async def salvar_equipe_json(
+    os_id: int,
+    dados: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Salva gerenciamento de equipe em formato JSON
+    
+    Args:
+        os_id: ID da OS
+        dados: JSON com membros da equipe
+        
+    Returns:
+        Mensagem de sucesso
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    os_obj.dados_equipe_json = dados
+    db.commit()
+    
+    return {"message": "Equipe salva com sucesso", "os_id": os_id}
+
+
+@router.get("/{os_id}/equipe-json")
+async def obter_equipe_json(
+    os_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Retorna gerenciamento de equipe em formato JSON
+    """
+    os_obj = db.query(OrdemServico).filter(OrdemServico.id == os_id).first()
+    if not os_obj:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    
+    if not os_obj.dados_equipe_json:
+        raise HTTPException(status_code=404, detail="Nenhuma equipe encontrada")
+    
+    return os_obj.dados_equipe_json

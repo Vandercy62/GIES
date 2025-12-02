@@ -43,7 +43,7 @@ async def configurar_whatsapp(
 ):
     """
     Configurar WhatsApp Business API
-    
+
     Campos obrigatórios:
     - token: Token permanente do WhatsApp Business API
     - numero_remetente: Número do telefone business (apenas números)
@@ -61,7 +61,7 @@ async def configurar_whatsapp(
                     status_code=400,
                     detail=f"Campo obrigatório não informado: {campo}"
                 )
-        
+
         # Validar formato do número
         numero = re.sub(r'[^\d]', '', config['numero_remetente'])
         if len(numero) < 10 or len(numero) > 15:
@@ -69,7 +69,7 @@ async def configurar_whatsapp(
                 status_code=400,
                 detail="Número de telefone inválido"
             )
-        
+
         # Testar conectividade com a API
         teste_resultado = await testar_conectividade_whatsapp(config)
         if not teste_resultado['sucesso']:
@@ -78,20 +78,20 @@ async def configurar_whatsapp(
                 detail="Erro ao conectar com WhatsApp API: " +
                        teste_resultado['erro']
             )
-        
+
         # Buscar configuração existente ou criar nova
         config_existente = db.query(ComunicacaoConfig).filter(
             ComunicacaoConfig.tipo == TipoComunicacao.WHATSAPP,
             ComunicacaoConfig.nome == "whatsapp_business_default"
         ).first()
-        
+
         if config_existente:
             # Atualizar existente
             config_existente.configuracoes = config
             config_existente.ativo = True
             config_existente.atualizado_em = datetime.now()
             db.commit()
-            
+
             return {
                 "sucesso": True,
                 "mensagem": "Configuração WhatsApp atualizada com sucesso",
@@ -106,16 +106,16 @@ async def configurar_whatsapp(
                 ativo=True,
                 padrao=True
             )
-            
+
             db.add(nova_config)
             db.commit()
-            
+
             return {
                 "sucesso": True,
                 "mensagem": "Configuração WhatsApp criada com sucesso",
                 "teste_api": teste_resultado
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -132,18 +132,18 @@ async def obter_configuracao_whatsapp(db: Session = Depends(get_db)):
         ComunicacaoConfig.ativo == True,
         ComunicacaoConfig.padrao == True
     ).first()
-    
+
     if not config:
         raise HTTPException(
             status_code=404,
             detail="Configuração WhatsApp não encontrada"
         )
-    
+
     # Remover token da resposta por segurança
     config_segura = config.configuracoes.copy()
     if 'token' in config_segura:
         config_segura['token'] = config_segura['token'][:8] + "..." if len(config_segura['token']) > 8 else "***"
-    
+
     return {
         "id": config.id,
         "nome": config.nome,
@@ -161,15 +161,15 @@ async def testar_whatsapp(db: Session = Depends(get_db)):
         ComunicacaoConfig.ativo == True,
         ComunicacaoConfig.padrao == True
     ).first()
-    
+
     if not config:
         raise HTTPException(
             status_code=404,
             detail="Configuração WhatsApp não encontrada"
         )
-    
+
     resultado = await testar_conectividade_whatsapp(config.configuracoes)
-    
+
     return resultado
 
 # ============================================================================
@@ -183,7 +183,7 @@ async def enviar_mensagem_whatsapp(
 ):
     """
     Enviar mensagem de texto via WhatsApp
-    
+
     Campos:
     - telefone: Número do destinatário (formato brasileiro)
     - mensagem: Texto da mensagem
@@ -196,22 +196,22 @@ async def enviar_mensagem_whatsapp(
                 status_code=400,
                 detail="Campos obrigatórios: telefone, mensagem"
             )
-        
+
         # Buscar configuração WhatsApp
         config = db.query(ComunicacaoConfig).filter(
             ComunicacaoConfig.tipo == TipoComunicacao.WHATSAPP,
             ComunicacaoConfig.ativo == True,
             ComunicacaoConfig.padrao == True
         ).first()
-        
+
         if not config:
             raise HTTPException(
                 status_code=404,
                 detail="WhatsApp não configurado"
             )
-        
+
         cfg = config.configuracoes
-        
+
         # Normalizar telefone
         telefone = normalizar_telefone_brasileiro(dados['telefone'])
         if not telefone:
@@ -219,7 +219,7 @@ async def enviar_mensagem_whatsapp(
                 status_code=400,
                 detail="Número de telefone inválido"
             )
-        
+
         # Preparar payload para WhatsApp API
         payload = {
             "messaging_product": "whatsapp",
@@ -229,12 +229,12 @@ async def enviar_mensagem_whatsapp(
                 "body": dados['mensagem']
             }
         }
-        
+
         headers = {
             'Authorization': f"Bearer {cfg['token']}",
             'Content-Type': 'application/json'
         }
-        
+
         # Criar registro no histórico
         historico = ComunicacaoHistorico(
             tipo=TipoComunicacao.WHATSAPP,
@@ -246,7 +246,7 @@ async def enviar_mensagem_whatsapp(
             origem_modulo=dados.get('origem_modulo', 'MANUAL'),
             origem_id=dados.get('origem_id')
         )
-        
+
         # Enviar para WhatsApp API
         response = requests.post(
             f"{cfg['api_url']}/{cfg['numero_remetente']}/messages",
@@ -254,19 +254,19 @@ async def enviar_mensagem_whatsapp(
             json=payload,
             timeout=30
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             message_id = result.get('messages', [{}])[0].get('id')
-            
+
             # Atualizar histórico com sucesso
             historico.status = StatusComunicacao.ENVIADO
             historico.enviado_em = datetime.now()
             historico.provider_response = result
-            
+
             db.add(historico)
             db.commit()
-            
+
             return {
                 "sucesso": True,
                 "mensagem": "WhatsApp enviado com sucesso",
@@ -277,20 +277,20 @@ async def enviar_mensagem_whatsapp(
         else:
             # Erro na API
             error_response = response.text
-            
+
             # Atualizar histórico com erro
             historico.status = StatusComunicacao.ERRO
             historico.erro_detalhes = f"API Error {response.status_code}: {error_response}"
             historico.provider_response = {"error": error_response, "status_code": response.status_code}
-            
+
             db.add(historico)
             db.commit()
-            
+
             raise HTTPException(
                 status_code=400,
                 detail=f"Erro na API WhatsApp: {response.status_code} - {error_response}"
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -300,7 +300,7 @@ async def enviar_mensagem_whatsapp(
             historico.erro_detalhes = str(e)
             db.add(historico)
             db.commit()
-        
+
         raise HTTPException(
             status_code=500,
             detail=f"Erro interno: {str(e)}"
@@ -313,7 +313,7 @@ async def enviar_template_whatsapp(
 ):
     """
     Enviar template pré-aprovado via WhatsApp
-    
+
     Campos:
     - telefone: Número do destinatário
     - template_name: Nome do template aprovado
@@ -325,20 +325,20 @@ async def enviar_template_whatsapp(
                 status_code=400,
                 detail="Campos obrigatórios: telefone, template_name"
             )
-        
+
         # Buscar configuração
         config = db.query(ComunicacaoConfig).filter(
             ComunicacaoConfig.tipo == TipoComunicacao.WHATSAPP,
             ComunicacaoConfig.ativo == True,
             ComunicacaoConfig.padrao == True
         ).first()
-        
+
         if not config:
             raise HTTPException(status_code=404, detail="WhatsApp não configurado")
-        
+
         cfg = config.configuracoes
         telefone = normalizar_telefone_brasileiro(dados['telefone'])
-        
+
         # Preparar payload do template
         payload = {
             "messaging_product": "whatsapp",
@@ -351,7 +351,7 @@ async def enviar_template_whatsapp(
                 }
             }
         }
-        
+
         # Adicionar parâmetros se fornecidos
         if 'parametros' in dados and dados['parametros']:
             payload["template"]["components"] = [
@@ -363,12 +363,12 @@ async def enviar_template_whatsapp(
                     ]
                 }
             ]
-        
+
         headers = {
             'Authorization': f"Bearer {cfg['token']}",
             'Content-Type': 'application/json'
         }
-        
+
         # Enviar
         response = requests.post(
             f"{cfg['api_url']}/{cfg['numero_remetente']}/messages",
@@ -376,7 +376,7 @@ async def enviar_template_whatsapp(
             json=payload,
             timeout=30
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             return {
@@ -390,7 +390,7 @@ async def enviar_template_whatsapp(
                 status_code=400,
                 detail=f"Erro na API WhatsApp: {response.status_code} - {response.text}"
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -413,17 +413,17 @@ async def verificar_webhook(
         ComunicacaoConfig.tipo == TipoComunicacao.WHATSAPP,
         ComunicacaoConfig.ativo == True
     ).first()
-    
+
     if not config:
         raise HTTPException(status_code=404, detail="Configuração não encontrada")
-    
+
     webhook_token = config.configuracoes.get('webhook_verify_token')
-    
+
     if (hub_mode == "subscribe" and 
         hub_verify_token == webhook_token and 
         hub_challenge):
         return int(hub_challenge)
-    
+
     raise HTTPException(status_code=403, detail="Token de verificação inválido")
 
 @router.post("/webhook")
@@ -436,12 +436,12 @@ async def receber_webhook(
     try:
         body = await request.body()
         data = json.loads(body)
-        
+
         # Processar em background para resposta rápida
         background_tasks.add_task(processar_webhook_whatsapp, data, db)
-        
+
         return {"status": "received"}
-        
+
     except Exception as e:
         # Log do erro mas retorna sucesso para não reenvio
         print(f"Erro no webhook WhatsApp: {e}")
@@ -458,14 +458,14 @@ async def testar_conectividade_whatsapp(config: Dict[str, Any]) -> Dict[str, Any
             'Authorization': f"Bearer {config['token']}",
             'Content-Type': 'application/json'
         }
-        
+
         # Testar endpoint de informações do número
         response = requests.get(
             f"{config['api_url']}/{config['numero_remetente']}",
             headers=headers,
             timeout=10
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             return {
@@ -483,7 +483,7 @@ async def testar_conectividade_whatsapp(config: Dict[str, Any]) -> Dict[str, Any
                 "erro": f"API retornou {response.status_code}: {response.text}",
                 "detalhes": {"status_code": response.status_code}
             }
-            
+
     except Exception as e:
         return {
             "sucesso": False,
@@ -495,11 +495,11 @@ def normalizar_telefone_brasileiro(telefone: str) -> Optional[str]:
     """Normalizar telefone brasileiro para formato WhatsApp"""
     # Remover caracteres não numéricos
     telefone = re.sub(r'[^\d]', '', telefone)
-    
+
     # Validações básicas
     if len(telefone) < 10 or len(telefone) > 13:
         return None
-    
+
     # Adicionar código do país se necessário
     if len(telefone) == 10:  # Telefone fixo sem DDD
         return None  # Inválido
@@ -509,21 +509,21 @@ def normalizar_telefone_brasileiro(telefone: str) -> Optional[str]:
         pass
     else:
         return None
-    
+
     # Validar formato brasileiro
     if not telefone.startswith("55"):
         return None
-    
+
     # Validar DDD (11 a 99)
     ddd = telefone[2:4]
     if not (11 <= int(ddd) <= 99):
         return None
-    
+
     # Validar celular (9 dígitos começando com 9)
     numero = telefone[4:]
     if len(numero) == 9 and numero.startswith("9"):
         return telefone
-    
+
     return None
 
 def processar_webhook_whatsapp(data: Dict[str, Any], db: Session):
@@ -537,12 +537,12 @@ def processar_webhook_whatsapp(data: Dict[str, Any], db: Session):
                         message_id = status.get('id')
                         new_status = status.get('status')
                         timestamp = status.get('timestamp')
-                        
+
                         # Buscar comunicação pelo message_id
                         comunicacao = db.query(ComunicacaoHistorico).filter(
                             ComunicacaoHistorico.provider_response.contains(f'"id": "{message_id}"')
                         ).first()
-                        
+
                         if comunicacao:
                             # Mapear status WhatsApp para nosso enum
                             status_map = {
@@ -551,16 +551,16 @@ def processar_webhook_whatsapp(data: Dict[str, Any], db: Session):
                                 'read': StatusComunicacao.LIDO,
                                 'failed': StatusComunicacao.ERRO
                             }
-                            
+
                             if new_status in status_map:
                                 comunicacao.status = status_map[new_status]
-                                
+
                                 if new_status == 'delivered':
                                     comunicacao.entregue_em = datetime.fromtimestamp(int(timestamp))
                                 elif new_status == 'read':
                                     comunicacao.lido_em = datetime.fromtimestamp(int(timestamp))
-                                
+
                                 db.commit()
-                                
+
     except Exception as e:
         print(f"Erro ao processar webhook: {e}")

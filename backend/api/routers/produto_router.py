@@ -49,23 +49,23 @@ async def criar_produto(
             produto_existente = db.query(Produto).filter(
                 Produto.codigo == produto_data.codigo
             ).first()
-            
+
             if produto_existente:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Código de produto já existe"
                 )
-        
+
         # Criar produto
         db_produto = Produto(**produto_data.dict())
-        
+
         db.add(db_produto)
         db.commit()
         db.refresh(db_produto)
-        
+
         logger.info(f"Produto {db_produto.descricao} criado")
         return db_produto
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -88,27 +88,27 @@ async def listar_produtos(
     """Listar produtos com filtros"""
     try:
         query = db.query(Produto)
-        
+
         # Aplicar filtros
         if filtros.categoria:
             query = query.filter(Produto.categoria == filtros.categoria)
-            
+
         if filtros.status is not None:
             query = query.filter(Produto.status == filtros.status)
-        
+
         # Total
         total = query.count()
-        
+
         # Paginação
         produtos = query.offset(skip).limit(limit).all()
-        
+
         return ListagemProdutos(
             itens=produtos,
             total=total,
             skip=skip,
             limit=limit
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -128,15 +128,15 @@ async def obter_produto(
     """Obter produto por ID"""
     try:
         produto = db.query(Produto).filter(Produto.id == produto_id).first()
-        
+
         if not produto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Produto não encontrado"
             )
-        
+
         return produto
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -157,25 +157,25 @@ async def atualizar_produto(
     """Atualizar produto"""
     try:
         produto = db.query(Produto).filter(Produto.id == produto_id).first()
-        
+
         if not produto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Produto não encontrado"
             )
-        
+
         # Atualizar campos
         update_data = produto_update.dict(exclude_unset=True)
-        
+
         for field, value in update_data.items():
             setattr(produto, field, value)
-        
+
         db.commit()
         db.refresh(produto)
-        
+
         logger.info(f"Produto {produto.descricao} atualizado")
         return produto
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -196,19 +196,19 @@ async def deletar_produto(
     """Deletar produto (soft delete)"""
     try:
         produto = db.query(Produto).filter(Produto.id == produto_id).first()
-        
+
         if not produto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Produto não encontrado"
             )
-        
+
         # Soft delete
         produto.status = "Inativo"
         db.commit()
-        
+
         logger.info(f"Produto {produto.descricao} deletado")
-        
+
     except HTTPException:
         raise
     except Exception as e:

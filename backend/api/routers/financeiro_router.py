@@ -22,18 +22,18 @@ from decimal import Decimal
 from backend.schemas.financeiro_schemas import (
     # Conta a Receber
     ContaReceberCreate, ContaReceberUpdate, ContaReceberResponse,
-    
+
     # Conta a Pagar
     ContaPagarCreate, ContaPagarUpdate, ContaPagarResponse,
-    
+
     # Movimentação Financeira
     MovimentacaoFinanceiraCreate, MovimentacaoFinanceiraUpdate, 
     MovimentacaoFinanceiraResponse,
-    
+
     # Categoria Financeira
     CategoriaFinanceiraCreate, CategoriaFinanceiraUpdate,
     CategoriaFinanceiraResponse,
-    
+
     # Enums
     TipoMovimentacao, StatusFinanceiro, FormaPagamento, TipoCategoria
 )
@@ -87,7 +87,7 @@ def _calcular_total_contas_receber(db: Session, filtros: Optional[Dict] = None) 
     query = db.query(func.sum(ContaReceber.valor_original)).filter(
         ContaReceber.ativo == True
     )
-    
+
     if filtros:
         if filtros.get("status"):
             query = query.filter(ContaReceber.status == filtros["status"])
@@ -95,7 +95,7 @@ def _calcular_total_contas_receber(db: Session, filtros: Optional[Dict] = None) 
             query = query.filter(ContaReceber.data_vencimento >= filtros["data_inicio"])
         if filtros.get("data_fim"):
             query = query.filter(ContaReceber.data_vencimento <= filtros["data_fim"])
-    
+
     resultado = query.scalar()
     return resultado if resultado else Decimal('0.00')
 
@@ -104,7 +104,7 @@ def _calcular_total_contas_pagar(db: Session, filtros: Optional[Dict] = None) ->
     query = db.query(func.sum(ContaPagar.valor_original)).filter(
         ContaPagar.ativo == True
     )
-    
+
     if filtros:
         if filtros.get("status"):
             query = query.filter(ContaPagar.status == filtros["status"])
@@ -112,7 +112,7 @@ def _calcular_total_contas_pagar(db: Session, filtros: Optional[Dict] = None) ->
             query = query.filter(ContaPagar.data_vencimento >= filtros["data_inicio"])
         if filtros.get("data_fim"):
             query = query.filter(ContaPagar.data_vencimento <= filtros["data_fim"])
-    
+
     resultado = query.scalar()
     return resultado if resultado else Decimal('0.00')
 
@@ -135,20 +135,20 @@ async def listar_contas_receber(
     """Lista contas a receber com filtros avançados"""
     try:
         query = db.query(ContaReceber).filter(ContaReceber.ativo == True)
-        
+
         # Aplicar filtros
         if status_param:
             query = query.filter(ContaReceber.status == status_param)
-        
+
         if cliente_id:
             query = query.filter(ContaReceber.cliente_id == cliente_id)
-        
+
         if data_inicio:
             query = query.filter(ContaReceber.data_vencimento >= data_inicio)
-        
+
         if data_fim:
             query = query.filter(ContaReceber.data_vencimento <= data_fim)
-        
+
         if vencidas is True:
             query = query.filter(
                 and_(
@@ -156,13 +156,13 @@ async def listar_contas_receber(
                     ContaReceber.status != StatusFinanceiro.PAGO
                 )
             )
-        
+
         # Ordenação e paginação
         query = query.order_by(desc(ContaReceber.data_vencimento))
         contas = query.offset(skip).limit(limit).all()
-        
+
         return contas
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -183,7 +183,7 @@ async def criar_conta_receber(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
             )
-        
+
         # Verificar se cliente existe (comentado temporariamente)
         # if conta.cliente_id:
         #     cliente = db.query(Cliente).filter(Cliente.id == conta.cliente_id).first()
@@ -192,17 +192,17 @@ async def criar_conta_receber(
         #             status_code=status.HTTP_404_NOT_FOUND,
         #             detail="Cliente não encontrado"
         #         )
-        
+
         # Criar conta
         db_conta = ContaReceber(**conta.model_dump())
         db_conta.usuario_criacao_id = current_user.id
-        
+
         db.add(db_conta)
         db.commit()
         db.refresh(db_conta)
-        
+
         return db_conta
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -223,13 +223,13 @@ async def obter_conta_receber(
         ContaReceber.id == conta_id,
         ContaReceber.ativo == True
     ).first()
-    
+
     if not conta:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=CONTA_RECEBER_NAO_ENCONTRADA
         )
-    
+
     return conta
 
 @router.put("/contas-receber/{conta_id}", response_model=ContaReceberResponse)
@@ -245,26 +245,26 @@ async def atualizar_conta_receber(
             ContaReceber.id == conta_id,
             ContaReceber.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_RECEBER_NAO_ENCONTRADA
             )
-        
+
         # Atualizar campos
         update_data = conta_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_conta, field, value)
-        
+
         db_conta.data_atualizacao = datetime.now()
         db_conta.usuario_atualizacao_id = current_user.id
-        
+
         db.commit()
         db.refresh(db_conta)
-        
+
         return db_conta
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -286,22 +286,22 @@ async def excluir_conta_receber(
             ContaReceber.id == conta_id,
             ContaReceber.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_RECEBER_NAO_ENCONTRADA
             )
-        
+
         # Soft delete
         setattr(db_conta, 'ativo', False)
         setattr(db_conta, 'data_atualizacao', datetime.now())
         setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
-        
+
         db.commit()
-        
+
         return {"message": "Conta a receber excluída com sucesso"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -327,19 +327,19 @@ async def baixar_conta_receber(
             ContaReceber.id == conta_id,
             ContaReceber.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_RECEBER_NAO_ENCONTRADA
             )
-        
+
         if valor_pago <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
             )
-        
+
         # Atualizar conta
         setattr(db_conta, 'valor_pago', valor_pago)
         setattr(db_conta, 'data_pagamento', data_pagamento)
@@ -348,7 +348,7 @@ async def baixar_conta_receber(
         setattr(db_conta, 'status', StatusFinanceiro.PAGO)
         setattr(db_conta, 'data_atualizacao', datetime.now())
         setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
-        
+
         # Criar movimentação financeira
         movimentacao = MovimentacaoFinanceira(
             tipo=TipoMovimentacao.RECEITA,
@@ -359,12 +359,12 @@ async def baixar_conta_receber(
             conta_receber_id=conta_id,
             usuario_criacao_id=current_user.id
         )
-        
+
         db.add(movimentacao)
         db.commit()
-        
+
         return {"message": "Baixa realizada com sucesso"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -393,20 +393,20 @@ async def listar_contas_pagar(
     """Lista contas a pagar com filtros avançados"""
     try:
         query = db.query(ContaPagar).filter(ContaPagar.ativo == True)
-        
+
         # Aplicar filtros
         if status_param:
             query = query.filter(ContaPagar.status == status_param)
-        
+
         if fornecedor:
             query = query.filter(ContaPagar.fornecedor.ilike(f"%{fornecedor}%"))
-        
+
         if data_inicio:
             query = query.filter(ContaPagar.data_vencimento >= data_inicio)
-        
+
         if data_fim:
             query = query.filter(ContaPagar.data_vencimento <= data_fim)
-        
+
         if vencidas is True:
             query = query.filter(
                 and_(
@@ -414,13 +414,13 @@ async def listar_contas_pagar(
                     ContaPagar.status != StatusFinanceiro.PAGO
                 )
             )
-        
+
         # Ordenação e paginação
         query = query.order_by(desc(ContaPagar.data_vencimento))
         contas = query.offset(skip).limit(limit).all()
-        
+
         return contas
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -441,17 +441,17 @@ async def criar_conta_pagar(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
             )
-        
+
         # Criar conta
         db_conta = ContaPagar(**conta.model_dump())
         db_conta.usuario_criacao_id = current_user.id
-        
+
         db.add(db_conta)
         db.commit()
         db.refresh(db_conta)
-        
+
         return db_conta
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -472,13 +472,13 @@ async def obter_conta_pagar(
         ContaPagar.id == conta_id,
         ContaPagar.ativo == True
     ).first()
-    
+
     if not conta:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=CONTA_PAGAR_NAO_ENCONTRADA
         )
-    
+
     return conta
 
 @router.put("/contas-pagar/{conta_id}", response_model=ContaPagarResponse)
@@ -494,26 +494,26 @@ async def atualizar_conta_pagar(
             ContaPagar.id == conta_id,
             ContaPagar.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_PAGAR_NAO_ENCONTRADA
             )
-        
+
         # Atualizar campos
         update_data = conta_update.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_conta, field, value)
-        
+
         db_conta.data_atualizacao = datetime.now()
         db_conta.usuario_atualizacao_id = current_user.id
-        
+
         db.commit()
         db.refresh(db_conta)
-        
+
         return db_conta
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -535,22 +535,22 @@ async def excluir_conta_pagar(
             ContaPagar.id == conta_id,
             ContaPagar.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_PAGAR_NAO_ENCONTRADA
             )
-        
+
         # Soft delete
         setattr(db_conta, 'ativo', False)
         setattr(db_conta, 'data_atualizacao', datetime.now())
         setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
-        
+
         db.commit()
-        
+
         return {"message": "Conta a pagar excluída com sucesso"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -576,19 +576,19 @@ async def pagar_conta_pagar(
             ContaPagar.id == conta_id,
             ContaPagar.ativo == True
         ).first()
-        
+
         if not db_conta:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CONTA_PAGAR_NAO_ENCONTRADA
             )
-        
+
         if valor_pago <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=VALOR_INVALIDO
             )
-        
+
         # Atualizar conta
         setattr(db_conta, 'valor_pago', valor_pago)
         setattr(db_conta, 'data_pagamento', data_pagamento)
@@ -597,7 +597,7 @@ async def pagar_conta_pagar(
         setattr(db_conta, 'status', StatusFinanceiro.PAGO)
         setattr(db_conta, 'data_atualizacao', datetime.now())
         setattr(db_conta, 'usuario_atualizacao_id', current_user.id)
-        
+
         # Criar movimentação financeira
         movimentacao = MovimentacaoFinanceira(
             tipo=TipoMovimentacao.DESPESA,
@@ -608,12 +608,12 @@ async def pagar_conta_pagar(
             conta_pagar_id=conta_id,
             usuario_criacao_id=current_user.id
         )
-        
+
         db.add(movimentacao)
         db.commit()
-        
+
         return {"message": "Pagamento realizado com sucesso"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -641,23 +641,23 @@ async def listar_movimentacoes(
     """Lista movimentações financeiras"""
     try:
         query = db.query(MovimentacaoFinanceira).filter(MovimentacaoFinanceira.ativo == True)
-        
+
         if tipo:
             query = query.filter(MovimentacaoFinanceira.tipo == tipo)
-        
+
         if categoria_id:
             query = query.filter(MovimentacaoFinanceira.categoria_id == categoria_id)
-        
+
         if data_inicio:
             query = query.filter(MovimentacaoFinanceira.data_movimentacao >= data_inicio)
-        
+
         if data_fim:
             query = query.filter(MovimentacaoFinanceira.data_movimentacao <= data_fim)
-        
+
         movimentacoes = query.order_by(desc(MovimentacaoFinanceira.data_movimentacao)).offset(skip).limit(limit).all()
-        
+
         return movimentacoes
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -674,13 +674,13 @@ async def criar_movimentacao(
     try:
         db_movimentacao = MovimentacaoFinanceira(**movimentacao.model_dump())
         db_movimentacao.usuario_criacao_id = current_user.id
-        
+
         db.add(db_movimentacao)
         db.commit()
         db.refresh(db_movimentacao)
-        
+
         return db_movimentacao
-        
+
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -702,7 +702,7 @@ async def listar_categorias(
     categorias = db.query(CategoriaFinanceira).filter(
         CategoriaFinanceira.ativo == ativo
     ).order_by(CategoriaFinanceira.nome).all()
-    
+
     return categorias
 
 @router.post("/categorias", response_model=CategoriaFinanceiraResponse)
@@ -718,22 +718,22 @@ async def criar_categoria(
             CategoriaFinanceira.nome == categoria.nome,
             CategoriaFinanceira.ativo == True
         ).first()
-        
+
         if categoria_existente:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Já existe uma categoria com este nome"
             )
-        
+
         db_categoria = CategoriaFinanceira(**categoria.model_dump())
         db_categoria.usuario_criacao_id = current_user.id
-        
+
         db.add(db_categoria)
         db.commit()
         db.refresh(db_categoria)
-        
+
         return db_categoria
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -761,7 +761,7 @@ async def obter_resumo_fluxo_caixa(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=PERIODO_INVALIDO
             )
-        
+
         # Calcular entradas do período
         entradas = db.query(func.sum(MovimentacaoFinanceira.valor)).filter(
             MovimentacaoFinanceira.tipo == TipoMovimentacao.ENTRADA,
@@ -769,7 +769,7 @@ async def obter_resumo_fluxo_caixa(
             MovimentacaoFinanceira.data_movimentacao <= data_fim,
             MovimentacaoFinanceira.ativo == True
         ).scalar() or Decimal('0.00')
-        
+
         # Calcular saídas do período
         saidas = db.query(func.sum(MovimentacaoFinanceira.valor)).filter(
             MovimentacaoFinanceira.tipo == TipoMovimentacao.SAIDA,
@@ -777,9 +777,9 @@ async def obter_resumo_fluxo_caixa(
             MovimentacaoFinanceira.data_movimentacao <= data_fim,
             MovimentacaoFinanceira.ativo == True
         ).scalar() or Decimal('0.00')
-        
+
         saldo = entradas - saidas
-        
+
         return {
             "periodo_inicio": data_inicio,
             "periodo_fim": data_fim,
@@ -788,7 +788,7 @@ async def obter_resumo_fluxo_caixa(
             "saldo_periodo": float(saldo),
             "data_calculo": datetime.now()
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -806,32 +806,32 @@ async def obter_dashboard_resumo(
     try:
         hoje = date.today()
         inicio_mes = hoje.replace(day=1)
-        
+
         # Contas a receber pendentes
         total_receber = _calcular_total_contas_receber(db, {
             "status": StatusFinanceiro.PENDENTE,
             "data_inicio": inicio_mes
         })
-        
+
         # Contas a pagar pendentes
         total_pagar = _calcular_total_contas_pagar(db, {
             "status": StatusFinanceiro.PENDENTE,
             "data_inicio": inicio_mes
         })
-        
+
         # Movimentações do mês
         entradas_mes = db.query(func.sum(MovimentacaoFinanceira.valor)).filter(
             MovimentacaoFinanceira.tipo == TipoMovimentacao.ENTRADA,
             MovimentacaoFinanceira.data_movimentacao >= inicio_mes,
             MovimentacaoFinanceira.ativo == True
         ).scalar() or Decimal('0.00')
-        
+
         saidas_mes = db.query(func.sum(MovimentacaoFinanceira.valor)).filter(
             MovimentacaoFinanceira.tipo == TipoMovimentacao.SAIDA,
             MovimentacaoFinanceira.data_movimentacao >= inicio_mes,
             MovimentacaoFinanceira.ativo == True
         ).scalar() or Decimal('0.00')
-        
+
         return {
             "total_receber_mes": float(total_receber),
             "total_pagar_mes": float(total_pagar),
@@ -840,7 +840,7 @@ async def obter_dashboard_resumo(
             "saldo_mes": float(entradas_mes - saidas_mes),
             "data_atualizacao": datetime.now()
         }
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -850,6 +850,14 @@ async def obter_dashboard_resumo(
 # =============================================================================
 # ENDPOINTS - HEALTH CHECK E ESTATÍSTICAS SIMPLES
 # =============================================================================
+
+@router.get("/dashboard")
+async def obter_dashboard(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Alias para /dashboard/resumo - compatibilidade com dashboard principal"""
+    return await obter_dashboard_resumo(db, current_user)
 
 @router.get("/health")
 async def health_check_financeiro():
@@ -871,19 +879,19 @@ async def obter_estatisticas_resumo(
         total_contas_receber = db.query(func.count(ContaReceber.id)).filter(
             ContaReceber.ativo == True
         ).scalar()
-        
+
         total_contas_pagar = db.query(func.count(ContaPagar.id)).filter(
             ContaPagar.ativo == True
         ).scalar()
-        
+
         total_movimentacoes = db.query(func.count(MovimentacaoFinanceira.id)).filter(
             MovimentacaoFinanceira.ativo == True
         ).scalar()
-        
+
         total_categorias = db.query(func.count(CategoriaFinanceira.id)).filter(
             CategoriaFinanceira.ativo == True
         ).scalar()
-        
+
         return {
             "total_contas_receber": total_contas_receber or 0,
             "total_contas_pagar": total_contas_pagar or 0,
@@ -891,7 +899,7 @@ async def obter_estatisticas_resumo(
             "total_categorias": total_categorias or 0,
             "data_calculo": datetime.now()
         }
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

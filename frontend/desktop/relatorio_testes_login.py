@@ -102,7 +102,7 @@ print("""
 🔑 CREDENCIAIS PADRÃO:
    Usuário: admin
    Senha: admin123
-   
+
 ⚠️ IMPORTANTE: Alterar senha padrão em produção!
 
 ═══════════════════════════════════════════════════════

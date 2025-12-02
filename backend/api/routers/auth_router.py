@@ -62,10 +62,10 @@ async def login(
 ):
     """
     Autenticar usuário e retornar token de acesso.
-    
+
     - **username**: Nome de usuário ou email
     - **password**: Senha do usuário
-    
+
     Retorna token JWT válido por 8 horas.
     """
     import traceback
@@ -136,7 +136,7 @@ async def login(
 async def logout(current_user: Usuario = Depends(get_current_active_user)):
     """
     Fazer logout do usuário atual.
-    
+
     Na implementação atual, apenas confirma o logout.
     Em produção, poderia adicionar token blacklist.
     """
@@ -165,7 +165,7 @@ async def update_current_user_profile(
 ):
     """
     Atualizar dados do próprio perfil.
-    
+
     Usuários podem atualizar apenas seus próprios dados básicos.
     Perfil e status só podem ser alterados por administradores.
     """
@@ -182,13 +182,13 @@ async def update_current_user_profile(
                 detail="Email já está em uso"
             )
         current_user.email = user_update.email
-    
+
     if user_update.nome_completo is not None:
         current_user.nome_completo = user_update.nome_completo
-    
+
     if user_update.observacoes is not None:
         current_user.observacoes = user_update.observacoes
-    
+
     # Perfil e ativo só admin pode alterar
     if user_update.perfil is not None or user_update.ativo is not None:
         if current_user.perfil != "administrador":
@@ -196,10 +196,10 @@ async def update_current_user_profile(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Apenas administradores podem alterar perfil e status"
             )
-    
+
     db.commit()
     db.refresh(current_user)
-    
+
     return UserResponse.model_validate(current_user)
 
 # =======================================
@@ -214,7 +214,7 @@ async def change_password(
 ):
     """
     Trocar senha do usuário atual.
-    
+
     - **current_password**: Senha atual
     - **new_password**: Nova senha
     - **confirm_password**: Confirmação da nova senha
@@ -225,7 +225,7 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Senha atual incorreta"
         )
-    
+
     # Validar se senhas coincidem
     try:
         password_data.validate_passwords_match()
@@ -234,7 +234,7 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    
+
     # Validar força da nova senha
     is_valid, message = validate_password_strength(password_data.new_password)
     if not is_valid:
@@ -242,11 +242,11 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
-    
+
     # Atualizar senha
     current_user.senha_hash = hash_password(password_data.new_password)
     db.commit()
-    
+
     return SuccessResponse(
         message="Senha alterada com sucesso"
     )
@@ -258,10 +258,10 @@ async def forgot_password(
 ):
     """
     Recuperar senha esquecida gerando senha temporária.
-    
+
     - **username**: Nome de usuário
     - **email**: Email cadastrado
-    
+
     Gera senha temporária para colaboradores que esqueceram a senha.
     Retorna a senha temporária que deve ser alterada no próximo login.
     """
@@ -270,32 +270,32 @@ async def forgot_password(
         Usuario.username == recovery_data.username,
         Usuario.email == recovery_data.email
     ).first()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuário não encontrado ou dados incorretos"
         )
-    
+
     if not user.ativo:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuário inativo. Contate o administrador."
         )
-    
+
     # Gerar senha temporária simples (formato: Primotex@XXXX)
     import random
     import string
     random_suffix = ''.join(random.choices(string.digits, k=4))
     temporary_password = f"Primotex@{random_suffix}"
-    
+
     # Atualizar senha do usuário
     user.senha_hash = hash_password(temporary_password)
     user.ultima_atividade = datetime.now()
     db.commit()
-    
+
     logger.info(f"Senha recuperada para usuário: {user.username}")
-    
+
     return PasswordRecoveryResponse(
         message="Senha temporária gerada com sucesso. Anote e altere após o login.",
         temporary_password=temporary_password,
@@ -313,7 +313,7 @@ async def list_users(
 ):
     """
     Listar todos os usuários do sistema.
-    
+
     Acesso restrito a gerentes e administradores.
     """
     users = db.query(Usuario).all()
@@ -327,7 +327,7 @@ async def create_user(
 ):
     """
     Criar novo usuário no sistema.
-    
+
     Acesso restrito a administradores.
     """
     # Verificar se username já existe
@@ -339,7 +339,7 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Nome de usuário já existe"
         )
-    
+
     # Verificar se email já existe
     existing_email = db.query(Usuario).filter(
         Usuario.email == user_data.email
@@ -349,14 +349,14 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email já está em uso"
         )
-    
+
     # Validar perfil
     if user_data.perfil not in [p["value"] for p in PERFIS_SISTEMA]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Perfil inválido"
         )
-    
+
     # Validar força da senha
     is_valid, message = validate_password_strength(user_data.password)
     if not is_valid:
@@ -364,7 +364,7 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
-    
+
     # Criar usuário
     new_user = Usuario(
         username=user_data.username,
@@ -375,11 +375,11 @@ async def create_user(
         ativo=user_data.ativo,
         observacoes=user_data.observacoes
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     return UserResponse.model_validate(new_user)
 
 @router.get("/users/{user_id}", response_model=UserResponse, summary="Obter usuário")
@@ -390,7 +390,7 @@ async def get_user(
 ):
     """
     Obter dados de usuário específico.
-    
+
     Acesso restrito a gerentes e administradores.
     """
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
@@ -399,7 +399,7 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuário não encontrado"
         )
-    
+
     return UserResponse.model_validate(user)
 
 @router.put("/users/{user_id}", response_model=UserResponse, summary="Atualizar usuário")
@@ -411,7 +411,7 @@ async def update_user(
 ):
     """
     Atualizar dados de usuário específico.
-    
+
     Acesso restrito a administradores.
     """
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
@@ -420,7 +420,7 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuário não encontrado"
         )
-    
+
     # Atualizar campos fornecidos
     if user_update.email is not None:
         # Verificar se email já existe
@@ -434,10 +434,10 @@ async def update_user(
                 detail="Email já está em uso"
             )
         user.email = user_update.email
-    
+
     if user_update.nome_completo is not None:
         user.nome_completo = user_update.nome_completo
-    
+
     if user_update.perfil is not None:
         if user_update.perfil not in [p["value"] for p in PERFIS_SISTEMA]:
             raise HTTPException(
@@ -445,16 +445,16 @@ async def update_user(
                 detail="Perfil inválido"
             )
         user.perfil = user_update.perfil
-    
+
     if user_update.ativo is not None:
         user.ativo = user_update.ativo
-    
+
     if user_update.observacoes is not None:
         user.observacoes = user_update.observacoes
-    
+
     db.commit()
     db.refresh(user)
-    
+
     return UserResponse.model_validate(user)
 
 @router.post("/reset-password", response_model=SuccessResponse, summary="Resetar senha")
@@ -465,7 +465,7 @@ async def reset_user_password(
 ):
     """
     Resetar senha de usuário específico.
-    
+
     Acesso restrito a administradores.
     """
     user = db.query(Usuario).filter(Usuario.id == password_data.user_id).first()
@@ -474,7 +474,7 @@ async def reset_user_password(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuário não encontrado"
         )
-    
+
     # Validar se senhas coincidem
     try:
         password_data.validate_passwords_match()
@@ -483,7 +483,7 @@ async def reset_user_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    
+
     # Validar força da nova senha
     is_valid, message = validate_password_strength(password_data.new_password)
     if not is_valid:
@@ -491,11 +491,11 @@ async def reset_user_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
-    
+
     # Atualizar senha
     user.senha_hash = hash_password(password_data.new_password)
     db.commit()
-    
+
     return SuccessResponse(
         message=f"Senha resetada com sucesso para {user.username}"
     )

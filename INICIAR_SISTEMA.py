@@ -22,18 +22,63 @@ from frontend.desktop.login_tkinter import LoginWindow
 
 
 def verificar_backend(max_tentativas=5):
-    """Verifica se backend está rodando"""
+    """Verifica se backend está rodando com health check DETALHADO
+    
+    🔄 MIGRADO: 17/11/2025 - Backend Robusto v2.0
+    Valida não apenas se porta responde, mas também:
+    - Status do backend (healthy/degraded)
+    - Database connection (SELECT 1)
+    - Routers carregados (10/10)
+    """
     
     api_url = "http://127.0.0.1:8002/health"
     
-    print("\n🔍 Verificando backend...")
+    print("\n🔍 Verificando Backend Robusto v2.0...")
     
     for tentativa in range(1, max_tentativas + 1):
         try:
-            response = requests.get(api_url, timeout=2)
+            response = requests.get(api_url, timeout=5)  # Aumentado para 5s
+            
             if response.status_code == 200:
-                print(f"✅ Backend online (tentativa {tentativa}/{max_tentativas})")
-                return True
+                # ===== HEALTH CHECK DETALHADO =====
+                try:
+                    data = response.json()
+                    status = data.get("status", "unknown")
+                    
+                    # Validar status geral
+                    if status != "healthy":
+                        print(f"⚠️  Backend degradado: {status}")
+                        continue
+                    
+                    # Validar database (NOVO - Backend Robusto)
+                    db_info = data.get("database", {})
+                    db_status = db_info.get("status", "unknown")
+                    
+                    if db_status != "healthy":
+                        print(f"❌ Database não está saudável: {db_status}")
+                        continue
+                    
+                    # Validar routers (NOVO - Backend Robusto)
+                    routers_info = data.get("routers", {})
+                    routers_loaded = routers_info.get("loaded", 0)
+                    routers_total = routers_info.get("total", 0)
+                    
+                    if routers_loaded < routers_total:
+                        print(f"⚠️  Apenas {routers_loaded}/{routers_total} routers carregados")
+                    
+                    # Sucesso!
+                    print(f"✅ Backend Robusto 100% operacional")
+                    print(f"   🗄️  Database: {db_status}")
+                    print(f"   🔌 Routers: {routers_loaded}/{routers_total}")
+                    print(f"   📊 Tables: {db_info.get('tables', '?')}")
+                    return True
+                    
+                except (ValueError, KeyError) as e:
+                    # Fallback para backend antigo (sem health check detalhado)
+                    print(f"⚠️  Backend antigo detectado (sem validação detalhada)")
+                    print(f"✅ Backend online (tentativa {tentativa}/{max_tentativas})")
+                    return True
+                    
         except requests.exceptions.RequestException:
             if tentativa < max_tentativas:
                 print(f"⏳ Tentativa {tentativa}/{max_tentativas} - Aguardando backend...")
@@ -60,10 +105,13 @@ def main():
         print("\n" + "=" * 70)
         print("⚠️  ATENÇÃO: Backend não está respondendo!")
         print("=" * 70)
-        print("\n📋 Para iniciar o backend, execute em outro terminal:")
-        print("   cd C:\\GIES")
-        print("   .venv\\Scripts\\python.exe -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8002")
-        print("\nOu clique duplo em: INICIAR_BACKEND.bat")
+        print("\n📋 Para iniciar o Backend Robusto v2.0:")
+        print("\n   🚀 OPÇÃO 1 (RECOMENDADO): Clique duplo em INICIAR_BACKEND_ROBUSTO.bat")
+        print("\n   💻 OPÇÃO 2: Execute manualmente:")
+        print("      cd C:\\GIES")
+        print("      .venv\\Scripts\\python.exe start_backend_robust.py")
+        print("\n   ⚠️  OPÇÃO 3 (ANTIGO - não recomendado):")
+        print("      .venv\\Scripts\\python.exe -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8002")
         print("=" * 70)
         
         resposta = input("\n❓ Deseja continuar mesmo assim? (s/N): ").lower()

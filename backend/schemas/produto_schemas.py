@@ -61,12 +61,12 @@ class ProdutoResponse(ProdutoBase):
     id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+
     @property
     def ativo(self) -> bool:
         """Compatibilidade: retorna True se status é Ativo"""
         return self.status == "Ativo"
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

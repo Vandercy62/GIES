@@ -4,7 +4,7 @@ Sistema ERP Primotex - Fase 3
 
 Schemas de validação para:
 - ContaReceber
-- ContaPagar  
+- ContaPagar
 - MovimentacaoFinanceira
 - FluxoCaixa
 - CategoriaFinanceira
@@ -93,14 +93,14 @@ class ContaReceberBase(BaseModel):
     categoria_id: Optional[int] = Field(None, description=ID_CATEGORIA_DESC)
     ordem_servico_id: Optional[int] = Field(None, description="ID da OS relacionada")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
-    
+
     @validator('valor_total')
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
-    
+
     @validator('descricao')
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
@@ -119,14 +119,14 @@ class ContaPagarBase(BaseModel):
     data_vencimento: date = Field(..., description=DATA_VENCIMENTO_DESC)
     categoria_id: Optional[int] = Field(None, description=ID_CATEGORIA_DESC)
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
-    
+
     @validator('valor_total')
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
-    
+
     @validator('fornecedor', 'descricao')
     def validar_textos(cls, v: str) -> str:
         """Valida e formata textos"""
@@ -148,14 +148,14 @@ class MovimentacaoFinanceiraBase(BaseModel):
     conta_receber_id: Optional[int] = Field(None, description="ID da conta a receber")
     conta_pagar_id: Optional[int] = Field(None, description="ID da conta a pagar")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
-    
+
     @validator('valor')
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
-    
+
     @validator('descricao')
     def validar_descricao(cls, v: str) -> str:
         """Valida e formata descrição"""
@@ -174,7 +174,7 @@ class CategoriaFinanceiraBase(BaseModel):
     icone: Optional[str] = Field(None, max_length=50, description="Ícone da categoria")
     descricao: Optional[str] = Field(None, max_length=200, description="Descrição da categoria")
     ativo: bool = Field(default=True, description="Se a categoria está ativa")
-    
+
     @validator('nome')
     def validar_nome(cls, v: str) -> str:
         """Valida e formata nome"""
@@ -191,7 +191,7 @@ class CategoriaFinanceiraBase(BaseModel):
 
 class ContaReceberCreate(ContaReceberBase):
     """Schema para criação de conta a receber"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -210,7 +210,7 @@ class ContaReceberCreate(ContaReceberBase):
 
 class ContaPagarCreate(ContaPagarBase):
     """Schema para criação de conta a pagar"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -229,7 +229,7 @@ class ContaPagarCreate(ContaPagarBase):
 class MovimentacaoFinanceiraCreate(MovimentacaoFinanceiraBase):
     """Schema para criação de movimentação financeira"""
     usuario_id: int = Field(..., description=ID_USUARIO_DESC)
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -250,7 +250,7 @@ class MovimentacaoFinanceiraCreate(MovimentacaoFinanceiraBase):
 
 class CategoriaFinanceiraCreate(CategoriaFinanceiraBase):
     """Schema para criação de categoria financeira"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -279,7 +279,7 @@ class ContaReceberUpdate(BaseModel):
     categoria_id: Optional[int] = None
     ordem_servico_id: Optional[int] = None
     observacoes: Optional[str] = Field(None, max_length=500)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -292,7 +292,7 @@ class ContaPagarUpdate(BaseModel):
     status: Optional[StatusFinanceiro] = None
     categoria_id: Optional[int] = None
     observacoes: Optional[str] = Field(None, max_length=500)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -305,7 +305,7 @@ class MovimentacaoFinanceiraUpdate(BaseModel):
     forma_pagamento: Optional[FormaPagamento] = None
     categoria_id: Optional[int] = None
     observacoes: Optional[str] = Field(None, max_length=500)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -317,7 +317,7 @@ class CategoriaFinanceiraUpdate(BaseModel):
     icone: Optional[str] = Field(None, max_length=50)
     descricao: Optional[str] = Field(None, max_length=200)
     ativo: Optional[bool] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -333,12 +333,12 @@ class ContaReceberResponse(ContaReceberBase):
     valor_pendente: Decimal
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     # Relacionamentos
     cliente_nome: Optional[str] = None
     categoria_nome: Optional[str] = None
     ordem_servico_numero: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -350,10 +350,10 @@ class ContaPagarResponse(ContaPagarBase):
     valor_pendente: Decimal
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     # Relacionamentos
     categoria_nome: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -361,11 +361,11 @@ class MovimentacaoFinanceiraResponse(MovimentacaoFinanceiraBase):
     """Schema de resposta para movimentação financeira"""
     id: int
     data_criacao: datetime
-    
+
     # Relacionamentos
     categoria_nome: Optional[str] = None
     usuario_nome: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -374,11 +374,11 @@ class CategoriaFinanceiraResponse(CategoriaFinanceiraBase):
     id: int
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     # Estatísticas
     total_movimentacoes: int = 0
     valor_total_periodo: Decimal = Field(default=Decimal('0'), description="Valor total no período")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -395,7 +395,7 @@ class ContaReceberFilter(BaseModel):
     categoria_id: Optional[int] = None
     valor_minimo: Optional[Decimal] = None
     valor_maximo: Optional[Decimal] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -408,7 +408,7 @@ class ContaPagarFilter(BaseModel):
     categoria_id: Optional[int] = None
     valor_minimo: Optional[Decimal] = None
     valor_maximo: Optional[Decimal] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -421,7 +421,7 @@ class MovimentacaoFilter(BaseModel):
     categoria_id: Optional[int] = None
     valor_minimo: Optional[Decimal] = None
     valor_maximo: Optional[Decimal] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -432,14 +432,14 @@ class FluxoCaixaRequest(BaseModel):
     periodo: PeriodoFluxo = Field(default=PeriodoFluxo.DIARIO, description="Período de agrupamento")
     incluir_previsoes: bool = Field(default=True, description="Incluir previsões futuras")
     categorias: Optional[List[int]] = Field(None, description="IDs das categorias")
-    
+
     @validator('data_fim')
     def validar_periodo(cls, v: date, values) -> date:
         """Valida se data fim é posterior ao início"""
         if 'data_inicio' in values and v < values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -450,7 +450,7 @@ class FluxoCaixaItem(BaseModel):
     despesas: Decimal = Field(default=Decimal('0'), description="Total de despesas")
     saldo: Decimal = Field(default=Decimal('0'), description="Saldo do período")
     saldo_acumulado: Decimal = Field(default=Decimal('0'), description="Saldo acumulado")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -461,7 +461,7 @@ class FluxoCaixaResponse(BaseModel):
     data_fim: date
     items: List[FluxoCaixaItem]
     resumo: Dict[str, Any] = Field(default_factory=dict)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -476,7 +476,7 @@ class DashboardFinanceiro(BaseModel):
     contas_pagar_hoje: int = 0
     valor_receber_total: Decimal = Field(default=Decimal('0'))
     valor_pagar_total: Decimal = Field(default=Decimal('0'))
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -486,14 +486,14 @@ class PagamentoRequest(BaseModel):
     data_pagamento: date = Field(..., description=DATA_PAGAMENTO_DESC)
     forma_pagamento: FormaPagamento = Field(..., description="Forma de pagamento")
     observacoes: Optional[str] = Field(None, max_length=500, description=OBSERVACOES_DESC)
-    
+
     @validator('valor_pago')
     def validar_valor_positivo(cls, v: Decimal) -> Decimal:
         """Valida se o valor é positivo"""
         if v <= 0:
             raise ValueError(VALOR_POSITIVO_MSG)
         return v
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -508,7 +508,7 @@ class ContaReceberListResponse(BaseModel):
     page: int
     size: int
     pages: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -519,7 +519,7 @@ class ContaPagarListResponse(BaseModel):
     page: int
     size: int
     pages: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -530,7 +530,7 @@ class MovimentacaoListResponse(BaseModel):
     page: int
     size: int
     pages: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -545,25 +545,25 @@ __all__ = [
     'FormaPagamento',
     'TipoCategoria',
     'PeriodoFluxo',
-    
+
     # Schemas Create
     'ContaReceberCreate',
     'ContaPagarCreate',
     'MovimentacaoFinanceiraCreate',
     'CategoriaFinanceiraCreate',
-    
+
     # Schemas Update
     'ContaReceberUpdate',
     'ContaPagarUpdate',
     'MovimentacaoFinanceiraUpdate',
     'CategoriaFinanceiraUpdate',
-    
+
     # Schemas Response
     'ContaReceberResponse',
     'ContaPagarResponse',
     'MovimentacaoFinanceiraResponse',
     'CategoriaFinanceiraResponse',
-    
+
     # Schemas Especiais
     'ContaReceberFilter',
     'ContaPagarFilter',
@@ -573,7 +573,7 @@ __all__ = [
     'FluxoCaixaResponse',
     'DashboardFinanceiro',
     'PagamentoRequest',
-    
+
     # Schemas de Listagem
     'ContaReceberListResponse',
     'ContaPagarListResponse',

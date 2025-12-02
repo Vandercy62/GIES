@@ -266,17 +266,17 @@ class EstatisticasComunicacao(BaseModel):
     total_entregues: int
     total_lidos: int
     total_erros: int
-    
+
     # Por tipo
     email_estatisticas: Dict[str, int]
     whatsapp_estatisticas: Dict[str, int]
     sms_estatisticas: Dict[str, int]
-    
+
     # Por módulo
     os_estatisticas: Dict[str, int]
     agendamento_estatisticas: Dict[str, int]
     financeiro_estatisticas: Dict[str, int]
-    
+
     # Métricas
     taxa_entrega: float = Field(..., ge=0, le=1)
     taxa_leitura: float = Field(..., ge=0, le=1)

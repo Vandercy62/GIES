@@ -31,7 +31,7 @@ OBSERVACOES_DESC = "Observações adicionais"
 class StatusAgendamento(str, Enum):
     """Status do agendamento"""
     AGENDADO = "agendado"
-    CONFIRMADO = "confirmado" 
+    CONFIRMADO = "confirmado"
     EM_ANDAMENTO = "em_andamento"
     CONCLUIDO = "concluido"
     CANCELADO = "cancelado"
@@ -84,7 +84,7 @@ class AgendamentoBase(BaseModel):
     cliente_id: Optional[int] = Field(None, description="ID do cliente relacionado")
     ordem_servico_id: Optional[int] = Field(None, description="ID da OS relacionada")
     observacoes: Optional[str] = Field(None, max_length=500, description="Observações adicionais")
-    
+
     @validator('data_agendamento')
     @classmethod
     def validar_data_futura(cls, v: datetime) -> datetime:
@@ -93,7 +93,7 @@ class AgendamentoBase(BaseModel):
             # Permitir datas passadas apenas para histórico/importação
             pass
         return v
-    
+
     @validator('titulo')
     @classmethod
     def validar_titulo(cls, v: str) -> str:
@@ -115,7 +115,7 @@ class ConfiguracaoAgendaBase(BaseModel):
     maximo_agendamentos_dia: int = Field(default=10, ge=1, le=50, description="Máximo de agendamentos por dia")
     antecedencia_minima: int = Field(default=60, ge=0, le=2880, description="Antecedência mínima para agendamento (minutos)")
     permite_fins_semana: bool = Field(default=False, description="Permite agendamentos em fins de semana")
-    
+
     @validator('horario_fim')
     @classmethod
     def validar_horarios(cls, v: time, values) -> time:
@@ -123,7 +123,7 @@ class ConfiguracaoAgendaBase(BaseModel):
         if 'horario_inicio' in values and v <= values['horario_inicio']:
             raise ValueError("Horário de fim deve ser posterior ao de início")
         return v
-    
+
     @validator('dias_trabalho')
     @classmethod
     def validar_dias_trabalho(cls, v: List[DiaSemana]) -> List[DiaSemana]:
@@ -140,7 +140,7 @@ class DisponibilidadeUsuarioBase(BaseModel):
     data_fim: datetime = Field(..., description=DATA_FIM_DESC)
     disponivel: bool = Field(..., description="Se está disponível ou não")
     motivo: Optional[str] = Field(None, max_length=200, description="Motivo da indisponibilidade")
-    
+
     @validator('data_fim')
     @classmethod
     def validar_periodo(cls, v: datetime, values) -> datetime:
@@ -148,7 +148,7 @@ class DisponibilidadeUsuarioBase(BaseModel):
         if 'data_inicio' in values and v <= values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
-    
+
     @root_validator(pre=True)
     def validar_motivo_indisponibilidade(cls, values):
         """Valida motivo para indisponibilidades"""
@@ -166,7 +166,7 @@ class BloqueioAgendaBase(BaseModel):
     tipo: TipoBloqueio = Field(..., description="Tipo do bloqueio")
     afeta_todos_usuarios: bool = Field(default=False, description="Se afeta todos os usuários")
     usuarios_afetados: Optional[List[int]] = Field(None, description="IDs dos usuários afetados")
-    
+
     @validator('data_fim')
     @classmethod
     def validar_periodo_bloqueio(cls, v: datetime, values) -> datetime:
@@ -174,7 +174,7 @@ class BloqueioAgendaBase(BaseModel):
         if 'data_inicio' in values and v <= values['data_inicio']:
             raise ValueError("Data fim deve ser posterior à data início")
         return v
-    
+
     @root_validator(pre=True)
     def validar_usuarios_bloqueio(cls, values):
         """Valida usuários afetados pelo bloqueio"""
@@ -190,7 +190,7 @@ class BloqueioAgendaBase(BaseModel):
 class AgendamentoCreate(AgendamentoBase):
     """Schema para criação de agendamento"""
     usuario_responsavel_id: int = Field(..., description="ID do usuário responsável")
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -211,7 +211,7 @@ class AgendamentoCreate(AgendamentoBase):
 
 class ConfiguracaoAgendaCreate(ConfiguracaoAgendaBase):
     """Schema para criação de configuração de agenda"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -231,7 +231,7 @@ class ConfiguracaoAgendaCreate(ConfiguracaoAgendaBase):
 
 class DisponibilidadeUsuarioCreate(DisponibilidadeUsuarioBase):
     """Schema para criação de disponibilidade específica"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -248,7 +248,7 @@ class DisponibilidadeUsuarioCreate(DisponibilidadeUsuarioBase):
 
 class BloqueioAgendaCreate(BloqueioAgendaBase):
     """Schema para criação de bloqueio de agenda"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -281,7 +281,7 @@ class AgendamentoUpdate(BaseModel):
     cliente_id: Optional[int] = None
     ordem_servico_id: Optional[int] = None
     observacoes: Optional[str] = Field(None, max_length=500)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -294,7 +294,7 @@ class ConfiguracaoAgendaUpdate(BaseModel):
     maximo_agendamentos_dia: Optional[int] = Field(None, ge=1, le=50)
     antecedencia_minima: Optional[int] = Field(None, ge=0, le=2880)
     permite_fins_semana: Optional[bool] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -304,7 +304,7 @@ class DisponibilidadeUsuarioUpdate(BaseModel):
     data_fim: Optional[datetime] = None
     disponivel: Optional[bool] = None
     motivo: Optional[str] = Field(None, max_length=200)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -318,7 +318,7 @@ class BloqueioAgendaUpdate(BaseModel):
     afeta_todos_usuarios: Optional[bool] = None
     usuarios_afetados: Optional[List[int]] = None
     ativo: Optional[bool] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -333,12 +333,12 @@ class AgendamentoResponse(AgendamentoBase):
     usuario_responsavel_id: int
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     # Relacionamentos
     cliente_nome: Optional[str] = None
     usuario_responsavel_nome: Optional[str] = None
     ordem_servico_numero: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -348,10 +348,10 @@ class ConfiguracaoAgendaResponse(ConfiguracaoAgendaBase):
     ativo: bool
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     # Relacionamento
     usuario_nome: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -359,10 +359,10 @@ class DisponibilidadeUsuarioResponse(DisponibilidadeUsuarioBase):
     """Schema de resposta para disponibilidade"""
     id: int
     data_criacao: datetime
-    
+
     # Relacionamento
     usuario_nome: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -372,7 +372,7 @@ class BloqueioAgendaResponse(BloqueioAgendaBase):
     ativo: bool
     data_criacao: datetime
     data_atualizacao: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -388,7 +388,7 @@ class AgendamentoFilter(BaseModel):
     cliente_id: Optional[int] = Field(None, description="ID do cliente")
     status: Optional[List[StatusAgendamento]] = Field(None, description="Status do agendamento")
     tipo: Optional[List[TipoAgendamento]] = Field(None, description="Tipos de agendamento")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -398,7 +398,7 @@ class DisponibilidadeConsulta(BaseModel):
     data_inicio: datetime = Field(..., description=DATA_INICIO_DESC)
     data_fim: datetime = Field(..., description=DATA_FIM_DESC)
     duracao_minutos: int = Field(..., ge=15, le=480, description="Duração desejada em minutos")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -406,7 +406,7 @@ class HorarioDisponivel(BaseModel):
     """Schema para horário disponível"""
     data_hora: datetime = Field(..., description="Data e hora disponível")
     duracao_maxima: int = Field(..., description="Duração máxima possível em minutos")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -416,7 +416,7 @@ class CalendarioResponse(BaseModel):
     agendamentos: List[AgendamentoResponse] = Field(default_factory=list)
     bloqueios: List[BloqueioAgendaResponse] = Field(default_factory=list)
     disponibilidades: List[DisponibilidadeUsuarioResponse] = Field(default_factory=list)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -427,7 +427,7 @@ class AgendamentoListResponse(BaseModel):
     page: int
     size: int
     pages: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -440,7 +440,7 @@ class EstatisticasAgendamento(BaseModel):
     por_status: Dict[str, int] = Field(default_factory=dict)
     por_tipo: Dict[str, int] = Field(default_factory=dict)
     taxa_confirmacao: float = 0.0
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -455,7 +455,7 @@ class AgendamentoIntegracaoOS(BaseModel):
     data_preferida: Optional[datetime] = Field(None, description="Data preferida pelo cliente")
     usuario_responsavel_id: Optional[int] = Field(None, description="ID do usuário responsável")
     observacoes: Optional[str] = Field(None, max_length=500)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -466,7 +466,7 @@ class NotificacaoAgendamento(BaseModel):
     destinatarios: List[str] = Field(..., description="Lista de destinatários")
     mensagem: str = Field(..., description="Mensagem da notificação")
     data_envio: Optional[datetime] = Field(None, description="Data de envio programada")
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -477,28 +477,28 @@ class NotificacaoAgendamento(BaseModel):
 __all__ = [
     # Enums
     'StatusAgendamento',
-    'TipoAgendamento', 
+    'TipoAgendamento',
     'DiaSemana',
     'TipoBloqueio',
-    
+
     # Schemas Create
     'AgendamentoCreate',
     'ConfiguracaoAgendaCreate',
     'DisponibilidadeUsuarioCreate',
     'BloqueioAgendaCreate',
-    
+
     # Schemas Update
     'AgendamentoUpdate',
     'ConfiguracaoAgendaUpdate',
     'DisponibilidadeUsuarioUpdate',
     'BloqueioAgendaUpdate',
-    
+
     # Schemas Response
     'AgendamentoResponse',
     'ConfiguracaoAgendaResponse',
     'DisponibilidadeUsuarioResponse',
     'BloqueioAgendaResponse',
-    
+
     # Schemas Especiais
     'AgendamentoFilter',
     'DisponibilidadeConsulta',

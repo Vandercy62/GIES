@@ -49,13 +49,13 @@ structlog.configure(
 
 class LogManager:
     """Gerenciador centralizado de logs"""
-    
+
     def __init__(self, config_manager=None):
         self.config = config_manager
         self._loggers: Dict[str, logging.Logger] = {}
         self._request_id: Optional[str] = None
         self._setup_logging()
-    
+
     def _setup_logging(self):
         """Configurar sistema de logging"""
         try:
@@ -66,20 +66,20 @@ class LogManager:
             log_backup_count = self._get_config('log_backup_count', 5)
             log_format = self._get_config('log_format', 
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            
+
             # Criar diretório de logs
             Path(log_file).parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Configurar formatters
             detailed_formatter = logging.Formatter(
                 '%(asctime)s | %(levelname)-8s | %(name)-20s | %(funcName)-15s | %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S'
             )
-            
+
             json_formatter = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(),
             )
-            
+
             # Handler para arquivo com rotação
             file_handler = logging.handlers.RotatingFileHandler(
                 log_file,
@@ -89,7 +89,7 @@ class LogManager:
             )
             file_handler.setLevel(logging.DEBUG)
             file_handler.setFormatter(detailed_formatter)
-            
+
             # Handler para arquivo JSON
             json_file = log_file.replace('.log', '.json')
             json_handler = logging.handlers.RotatingFileHandler(
@@ -100,14 +100,14 @@ class LogManager:
             )
             json_handler.setLevel(logging.INFO)
             json_handler.setFormatter(json_formatter)
-            
+
             # Handler para console
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(getattr(logging, log_level.upper()))
             console_handler.setFormatter(logging.Formatter(
                 '%(levelname)-8s | %(name)-15s | %(message)s'
             ))
-            
+
             # Configurar logger raiz
             root_logger = logging.getLogger()
             root_logger.setLevel(logging.DEBUG)
@@ -115,7 +115,7 @@ class LogManager:
             root_logger.addHandler(file_handler)
             root_logger.addHandler(json_handler)
             root_logger.addHandler(console_handler)
-            
+
             # Logger específico para auditoria
             audit_logger = logging.getLogger('audit')
             audit_handler = logging.handlers.RotatingFileHandler(
@@ -128,32 +128,32 @@ class LogManager:
             audit_logger.addHandler(audit_handler)
             audit_logger.setLevel(logging.INFO)
             audit_logger.propagate = False
-            
+
             print("Sistema de logs configurado com sucesso!")
-            
+
         except Exception as e:
             print(f"Erro ao configurar logs: {e}")
             traceback.print_exc()
-    
+
     def _get_config(self, key: str, default: Any) -> Any:
         """Obter configuração do config manager"""
         if self.config:
             return self.config.get(key, default)
         return default
-    
+
     def get_logger(self, name: str) -> structlog.BoundLogger:
         """Obter logger estruturado"""
         return structlog.get_logger(name)
-    
+
     def set_request_id(self, request_id: str = None):
         """Definir ID da requisição para correlação"""
         self._request_id = request_id or str(uuid.uuid4())
         return self._request_id
-    
+
     def clear_request_id(self):
         """Limpar ID da requisição"""
         self._request_id = None
-    
+
     def log_request(self, method: str, path: str, status_code: int, 
                    duration_ms: float, user_id: str = None):
         """Log de requisição HTTP"""
@@ -168,7 +168,7 @@ class LogManager:
             user_id=user_id,
             timestamp=datetime.utcnow().isoformat()
         )
-    
+
     def log_database_query(self, query: str, duration_ms: float, 
                           rows_affected: int = None):
         """Log de query de banco de dados"""
@@ -181,7 +181,7 @@ class LogManager:
             rows_affected=rows_affected,
             timestamp=datetime.utcnow().isoformat()
         )
-    
+
     def log_user_action(self, user_id: str, action: str, resource: str, 
                        details: Dict[str, Any] = None):
         """Log de auditoria de ações do usuário"""
@@ -196,7 +196,7 @@ class LogManager:
             "timestamp": datetime.utcnow().isoformat()
         }
         logger.info(json.dumps(audit_data, ensure_ascii=False))
-    
+
     def log_system_event(self, event_type: str, message: str, 
                         details: Dict[str, Any] = None):
         """Log de eventos do sistema"""
@@ -207,7 +207,7 @@ class LogManager:
             details=details or {},
             timestamp=datetime.utcnow().isoformat()
         )
-    
+
     def log_error(self, error: Exception, context: Dict[str, Any] = None):
         """Log estruturado de erro"""
         logger = self.get_logger("error")
@@ -220,7 +220,7 @@ class LogManager:
             stack_trace=traceback.format_exc(),
             timestamp=datetime.utcnow().isoformat()
         )
-    
+
     def log_performance_metrics(self, module: str, operation: str, 
                                metrics: Dict[str, Any]):
         """Log de métricas de performance"""
@@ -246,7 +246,7 @@ def log_function_call(logger_name: str = None):
         def wrapper(*args, **kwargs):
             logger = log_manager.get_logger(logger_name or func.__module__)
             start_time = datetime.utcnow()
-            
+
             try:
                 logger.debug(
                     f"Function call started: {func.__name__}",
@@ -255,25 +255,25 @@ def log_function_call(logger_name: str = None):
                     kwargs_keys=list(kwargs.keys()),
                     timestamp=start_time.isoformat()
                 )
-                
+
                 result = func(*args, **kwargs)
-                
+
                 end_time = datetime.utcnow()
                 duration = (end_time - start_time).total_seconds() * 1000
-                
+
                 logger.debug(
                     f"Function call completed: {func.__name__}",
                     function=func.__name__,
                     duration_ms=duration,
                     timestamp=end_time.isoformat()
                 )
-                
+
                 return result
-                
+
             except Exception as e:
                 end_time = datetime.utcnow()
                 duration = (end_time - start_time).total_seconds() * 1000
-                
+
                 logger.error(
                     f"Function call failed: {func.__name__}",
                     function=func.__name__,
@@ -282,7 +282,7 @@ def log_function_call(logger_name: str = None):
                     timestamp=end_time.isoformat()
                 )
                 raise
-        
+
         return wrapper
     return decorator
 
@@ -292,38 +292,38 @@ def log_api_endpoint(func):
     def wrapper(*args, **kwargs):
         start_time = datetime.utcnow()
         request_id = log_manager.set_request_id()
-        
+
         try:
             result = func(*args, **kwargs)
-            
+
             end_time = datetime.utcnow()
             duration = (end_time - start_time).total_seconds() * 1000
-            
+
             log_manager.log_request(
                 method="API",
                 path=func.__name__,
                 status_code=200,
                 duration_ms=duration
             )
-            
+
             return result
-            
+
         except Exception as e:
             end_time = datetime.utcnow()
             duration = (end_time - start_time).total_seconds() * 1000
-            
+
             log_manager.log_request(
                 method="API",
                 path=func.__name__,
                 status_code=500,
                 duration_ms=duration
             )
-            
+
             log_manager.log_error(e, {"endpoint": func.__name__})
             raise
         finally:
             log_manager.clear_request_id()
-    
+
     return wrapper
 
 
@@ -333,10 +333,10 @@ def log_api_endpoint(func):
 
 class LogAnalyzer:
     """Analisador de logs para insights"""
-    
+
     def __init__(self, log_file: str):
         self.log_file = log_file
-    
+
     def analyze_performance(self, hours: int = 24) -> Dict[str, Any]:
         """Analisar performance das últimas horas"""
         # Implementação futura: análise de logs JSON
@@ -346,7 +346,7 @@ class LogAnalyzer:
             "requests_per_hour": 0,
             "slow_endpoints": []
         }
-    
+
     def get_error_summary(self, hours: int = 24) -> Dict[str, Any]:
         """Obter resumo de erros"""
         # Implementação futura: análise de erros
@@ -381,13 +381,13 @@ def init_logging():
     try:
         print("📊 Inicializando sistema de logs...")
         log_manager._setup_logging()
-        
+
         # Teste de logs
         logger = get_logger("system")
         logger.info("Sistema de logs inicializado", component="logging")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Erro ao inicializar logs: {e}")
         return False
@@ -396,13 +396,13 @@ def init_logging():
 if __name__ == "__main__":
     # Teste do sistema de logs
     init_logging()
-    
+
     # Teste de diferentes tipos de log
     logger = get_logger("test")
     logger.info("Teste de log INFO", test_data={"value": 123})
     logger.warning("Teste de log WARNING", alert_type="test")
     logger.error("Teste de log ERROR", error_code=404)
-    
+
     # Teste de auditoria
     log_manager.log_user_action(
         user_id="test_user",
@@ -410,5 +410,5 @@ if __name__ == "__main__":
         resource="system",
         details={"ip": "127.0.0.1"}
     )
-    
+
     print("✅ Testes de log concluídos!")

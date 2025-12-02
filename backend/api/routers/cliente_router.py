@@ -57,30 +57,30 @@ async def criar_cliente(
             cliente_existente = db.query(Cliente).filter(
                 Cliente.cpf_cnpj == cliente_data.cpf_cnpj
             ).first()
-            
+
             if cliente_existente:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="CPF/CNPJ já cadastrado"
                 )
-        
+
         # Gerar código único do cliente
         ultimo_cliente = db.query(Cliente).order_by(Cliente.id.desc()).first()
         proximo_numero = (ultimo_cliente.id + 1) if ultimo_cliente else 1
         codigo_cliente = f"CLI{proximo_numero:05d}"  # Ex: CLI00001, CLI00002
-        
+
         # Criar cliente
         db_cliente = Cliente(**cliente_data.dict())
         setattr(db_cliente, "codigo", codigo_cliente)
         db_cliente.usuario_criacao_id = current_user.id
-        
+
         db.add(db_cliente)
         db.commit()
         db.refresh(db_cliente)
-        
+
         logger.info(f"Cliente {db_cliente.nome} ({codigo_cliente}) criado por {current_user.username}")
         return db_cliente
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -103,20 +103,20 @@ async def listar_clientes(
     """Listar clientes com filtros e paginação"""
     try:
         query = db.query(Cliente)
-        
+
         # Aplicar filtros
         if filtros.nome:
             query = query.filter(Cliente.nome.ilike(f"%{filtros.nome}%"))
-            
+
         if filtros.tipo_pessoa:
             query = query.filter(Cliente.tipo_pessoa == filtros.tipo_pessoa)
-            
+
         if filtros.cidade:
             query = query.filter(Cliente.cidade.ilike(f"%{filtros.cidade}%"))
-            
+
         if filtros.ativo is not None:
             query = query.filter(Cliente.ativo == filtros.ativo)
-        
+
         # Busca geral
         if filtros.busca:
             busca_term = f"%{filtros.busca}%"
@@ -128,23 +128,23 @@ async def listar_clientes(
                     Cliente.telefone.ilike(busca_term)
                 )
             )
-        
+
         # Total de registros
         total = query.count()
-        
+
         # Ordenação
         query = query.order_by(Cliente.nome)
-        
+
         # Paginação
         clientes = query.offset(skip).limit(limit).all()
-        
+
         return ListagemClientes(
             itens=[ClienteResponse.from_orm(c) for c in clientes],
             total=total,
             skip=skip,
             limit=limit
         )
-        
+
     except Exception as e:
         logger.error(f"Erro ao listar clientes: {e}")
         raise HTTPException(
@@ -162,15 +162,15 @@ async def obter_cliente(
     """Obter detalhes de um cliente"""
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        
+
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CLIENTE_NAO_ENCONTRADO
             )
-        
+
         return cliente
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -191,13 +191,13 @@ async def atualizar_cliente(
     """Atualizar dados de um cliente"""
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        
+
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CLIENTE_NAO_ENCONTRADO
             )
-        
+
         # Verificar CPF/CNPJ duplicado se alterado
         if cliente_update.cpf_cnpj and cliente_update.cpf_cnpj != cliente.cpf_cnpj:
             cliente_existente = db.query(Cliente).filter(
@@ -206,25 +206,25 @@ async def atualizar_cliente(
                     Cliente.id != cliente_id
                 )
             ).first()
-            
+
             if cliente_existente:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="CPF/CNPJ já cadastrado para outro cliente"
                 )
-        
+
         # Atualizar campos
         update_data = cliente_update.dict(exclude_unset=True)
-        
+
         for field, value in update_data.items():
             setattr(cliente, field, value)
-        
+
         db.commit()
         db.refresh(cliente)
-        
+
         logger.info(f"Cliente {cliente.nome} atualizado por {current_user.username}")
         return cliente
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -245,26 +245,26 @@ async def deletar_cliente(
     """Deletar um cliente (soft delete)"""
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        
+
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CLIENTE_NAO_ENCONTRADO
             )
-        
+
         # Verificar se tem OS vinculadas
         if hasattr(cliente, 'ordens_servico') and cliente.ordens_servico:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cliente possui Ordens de Serviço vinculadas e não pode ser deletado"
             )
-        
+
         # Soft delete
         cliente.ativo = False
         db.commit()
-        
+
         logger.info(f"Cliente {cliente.nome} deletado por {current_user.username}")
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -285,26 +285,26 @@ async def obter_historico_cliente(
     """Obter histórico de relacionamento com cliente"""
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        
+
         if not cliente:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=CLIENTE_NAO_ENCONTRADO
             )
-        
+
         # Buscar OS do cliente
         from backend.models.ordem_servico_model import OrdemServico
-        
+
         ordens = db.query(OrdemServico).filter(
             OrdemServico.cliente_id == cliente_id
         ).order_by(OrdemServico.data_abertura.desc()).all()
-        
+
         return {
             "cliente": cliente,
             "total_os": len(ordens),
             "ordens_servico": ordens
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

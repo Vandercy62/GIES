@@ -51,7 +51,7 @@ COLORS = {
     'light': '#ecf0f1',
     'dark': '#2c3e50',
     'background': '#f8f9fa',
-    'white': '#ffffff',
+    'white': '#fffff',
     'border': '#bdc3c7'
 }
 

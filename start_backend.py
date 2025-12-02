@@ -1,5 +1,15 @@
 """
-Inicializar Backend ERP Primotex
+Inicializar Backend ERP Primotex - BACKEND ROBUSTO v2.0
+
+🔄 MIGRADO EM: 17/11/2025
+🎯 BACKEND: main_robust.py (com validação + retry)
+📋 RECURSOS:
+   - Validação pré-startup (8 checks)
+   - Router isolation (1 falha ≠ crash total)
+   - Health check real (SELECT 1)
+   - Exception handlers globais
+   - Graceful shutdown
+
 Script alternativo usando uvicorn.run() diretamente
 """
 import uvicorn
@@ -21,8 +31,11 @@ if __name__ == "__main__":
     print("\n⏳ Aguarde a inicialização...\n")
     
     try:
+        # MIGRAÇÃO BACKEND ROBUSTO - 17/11/2025
+        # OLD: uvicorn.run("backend.api.main:app", ...)
+        # NEW: Usando main_robust com validação pré-startup + retry
         uvicorn.run(
-            "backend.api.main:app",
+            "backend.api.main_robust:app",  # ← BACKEND ROBUSTO
             host="127.0.0.1",
             port=8002,
             reload=False,  # Desabilitar reload para evitar problemas

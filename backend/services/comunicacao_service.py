@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 class ComunicacaoService:
     """Serviço principal para comunicações"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.jinja_env = Environment(
@@ -51,7 +51,7 @@ class ComunicacaoService:
             trim_blocks=True,
             lstrip_blocks=True
         )
-    
+
     def processar_template(self, template_texto: str, variaveis: Dict[str, Any]) -> str:
         """
         Processa template com variáveis usando Jinja2
@@ -62,7 +62,7 @@ class ComunicacaoService:
         except Exception as e:
             logger.error(f"Erro ao processar template: {e}")
             raise ValueError(f"Erro no template: {str(e)}")
-    
+
     def enviar_mensagem(self, request: EnvioMensagemRequest) -> EnvioMensagemResponse:
         """
         Enviar mensagem usando template ou conteúdo direto
@@ -74,28 +74,28 @@ class ComunicacaoService:
                     ComunicacaoTemplate.id == request.template_id,
                     ComunicacaoTemplate.ativo == True
                 ).first()
-                
+
                 if not template:
                     return EnvioMensagemResponse(
                         sucesso=False,
                         mensagem="Template não encontrado ou inativo"
                     )
-                
+
                 # Processar template com variáveis
                 variaveis = request.variaveis or {}
                 conteudo = self.processar_template(template.template_texto, variaveis)
                 assunto = template.assunto
-                
+
                 if template.assunto and request.variaveis:
                     assunto = self.processar_template(template.assunto, variaveis)
-                
+
                 tipo_comunicacao = template.canal
             else:
                 # Usar conteúdo direto
                 conteudo = request.conteudo
                 assunto = request.assunto
                 tipo_comunicacao = request.tipo_comunicacao
-            
+
             # Criar registro no histórico
             historico = ComunicacaoHistorico(
                 template_id=request.template_id,
@@ -110,47 +110,47 @@ class ComunicacaoService:
                 origem_id=request.origem_id,
                 agendado_para=request.agendar_para
             )
-            
+
             # Se é para agendar, adicionar à fila
             if request.agendar_para and request.agendar_para > datetime.now():
                 self._adicionar_a_fila(request, conteudo, assunto)
                 historico.status = StatusComunicacao.PENDENTE
                 self.db.add(historico)
                 self.db.commit()
-                
+
                 return EnvioMensagemResponse(
                     sucesso=True,
                     mensagem="Mensagem agendada com sucesso",
                     comunicacao_id=historico.id,
                     agendado=True
                 )
-            
+
             # Enviar imediatamente
             resultado = self._enviar_imediato(tipo_comunicacao, request, conteudo, assunto)
-            
+
             # Atualizar histórico com resultado
             historico.status = StatusComunicacao.ENVIADO if resultado['sucesso'] else StatusComunicacao.ERRO
             historico.enviado_em = datetime.now() if resultado['sucesso'] else None
             historico.erro_detalhes = resultado.get('erro')
             historico.provider_response = resultado.get('detalhes')
-            
+
             self.db.add(historico)
             self.db.commit()
-            
+
             return EnvioMensagemResponse(
                 sucesso=resultado['sucesso'],
                 mensagem=resultado['mensagem'],
                 comunicacao_id=historico.id,
                 detalhes=resultado.get('detalhes')
             )
-            
+
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem: {e}")
             return EnvioMensagemResponse(
                 sucesso=False,
                 mensagem=f"Erro interno: {str(e)}"
             )
-    
+
     def _adicionar_a_fila(self, request: EnvioMensagemRequest, conteudo: str, assunto: str):
         """Adicionar mensagem à fila de processamento"""
         fila_item = ComunicacaoFila(
@@ -166,14 +166,14 @@ class ComunicacaoService:
             origem_modulo=request.origem_modulo,
             origem_id=request.origem_id
         )
-        
+
         self.db.add(fila_item)
         self.db.commit()
-    
+
     def _enviar_imediato(self, tipo: TipoComunicacao, request: EnvioMensagemRequest, 
                         conteudo: str, assunto: str) -> Dict[str, Any]:
         """Enviar mensagem imediatamente"""
-        
+
         if tipo == TipoComunicacao.EMAIL:
             return self._enviar_email(request.destinatario_contato, assunto, conteudo)
         elif tipo == TipoComunicacao.WHATSAPP:
@@ -186,7 +186,7 @@ class ComunicacaoService:
                 'mensagem': f"Tipo de comunicação {tipo.value} não suportado",
                 'erro': 'TIPO_NAO_SUPORTADO'
             }
-    
+
     def _enviar_email(self, destinatario: str, assunto: str, conteudo: str) -> Dict[str, Any]:
         """Enviar email via SMTP"""
         try:
@@ -196,38 +196,38 @@ class ComunicacaoService:
                 ComunicacaoConfig.ativo == True,
                 ComunicacaoConfig.padrao == True
             ).first()
-            
+
             if not config:
                 return {
                     'sucesso': False,
                     'mensagem': 'Configuração de email não encontrada',
                     'erro': 'CONFIG_NAO_ENCONTRADA'
                 }
-            
+
             cfg = config.configuracoes
-            
+
             # Criar mensagem
             msg = MIMEMultipart('alternative')
             msg['Subject'] = assunto
             msg['From'] = f"{cfg['remetente_nome']} <{cfg['remetente_email']}>"
             msg['To'] = destinatario
-            
+
             # Adicionar conteúdo
             if '<html>' in conteudo or '<body>' in conteudo:
                 msg.attach(MIMEText(conteudo, 'html', 'utf-8'))
             else:
                 msg.attach(MIMEText(conteudo, 'plain', 'utf-8'))
-            
+
             # Conectar e enviar
             server = smtplib.SMTP(cfg['servidor_smtp'], cfg['porta'])
-            
+
             if cfg.get('usar_tls', True):
                 server.starttls()
-            
+
             server.login(cfg['usuario'], cfg['senha'])
             server.send_message(msg)
             server.quit()
-            
+
             return {
                 'sucesso': True,
                 'mensagem': 'Email enviado com sucesso',
@@ -237,7 +237,7 @@ class ComunicacaoService:
                     'timestamp': datetime.now().isoformat()
                 }
             }
-            
+
         except Exception as e:
             logger.error(f"Erro ao enviar email: {e}")
             return {
@@ -245,7 +245,7 @@ class ComunicacaoService:
                 'mensagem': f'Erro ao enviar email: {str(e)}',
                 'erro': 'ERRO_SMTP'
             }
-    
+
     def _enviar_whatsapp(self, destinatario: str, conteudo: str) -> Dict[str, Any]:
         """Enviar mensagem via WhatsApp Business API"""
         try:
@@ -255,21 +255,21 @@ class ComunicacaoService:
                 ComunicacaoConfig.ativo == True,
                 ComunicacaoConfig.padrao == True
             ).first()
-            
+
             if not config:
                 return {
                     'sucesso': False,
                     'mensagem': 'Configuração de WhatsApp não encontrada',
                     'erro': 'CONFIG_NAO_ENCONTRADA'
                 }
-            
+
             cfg = config.configuracoes
-            
+
             # Limpar número de telefone
             telefone = re.sub(r'[^\d]', '', destinatario)
             if not telefone.startswith('55'):
                 telefone = '55' + telefone
-            
+
             # Preparar payload
             payload = {
                 "messaging_product": "whatsapp",
@@ -279,12 +279,12 @@ class ComunicacaoService:
                     "body": conteudo
                 }
             }
-            
+
             headers = {
                 'Authorization': f"Bearer {cfg['token']}",
                 'Content-Type': 'application/json'
             }
-            
+
             # Enviar requisição
             response = requests.post(
                 f"{cfg['api_url']}/{cfg['numero_remetente']}/messages",
@@ -292,7 +292,7 @@ class ComunicacaoService:
                 json=payload,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 result = response.json()
                 return {
@@ -311,7 +311,7 @@ class ComunicacaoService:
                     'erro': 'ERRO_API_WHATSAPP',
                     'detalhes': response.text
                 }
-                
+
         except Exception as e:
             logger.error(f"Erro ao enviar WhatsApp: {e}")
             return {
@@ -319,7 +319,7 @@ class ComunicacaoService:
                 'mensagem': f'Erro ao enviar WhatsApp: {str(e)}',
                 'erro': 'ERRO_WHATSAPP'
             }
-    
+
     def _enviar_sms(self, destinatario: str, conteudo: str) -> Dict[str, Any]:
         """Enviar SMS via provedor"""
         try:
@@ -329,14 +329,14 @@ class ComunicacaoService:
                 ComunicacaoConfig.ativo == True,
                 ComunicacaoConfig.padrao == True
             ).first()
-            
+
             if not config:
                 return {
                     'sucesso': False,
                     'mensagem': 'Configuração de SMS não encontrada',
                     'erro': 'CONFIG_NAO_ENCONTRADA'
                 }
-            
+
             # Implementação específica do provedor
             # Por ora, retornar sucesso simulado
             return {
@@ -348,7 +348,7 @@ class ComunicacaoService:
                     'simulado': True
                 }
             }
-            
+
         except Exception as e:
             logger.error(f"Erro ao enviar SMS: {e}")
             return {
@@ -356,7 +356,7 @@ class ComunicacaoService:
                 'mensagem': f'Erro ao enviar SMS: {str(e)}',
                 'erro': 'ERRO_SMS'
             }
-    
+
     def processar_fila(self) -> Dict[str, Any]:
         """Processar itens pendentes na fila"""
         try:
@@ -367,23 +367,23 @@ class ComunicacaoService:
                 ComunicacaoFila.agendado_para <= agora,
                 ComunicacaoFila.tentativas < ComunicacaoFila.max_tentativas
             ).order_by(ComunicacaoFila.prioridade, ComunicacaoFila.criado_em).limit(50).all()
-            
+
             processados = 0
             sucessos = 0
             erros = 0
-            
+
             for item in itens_fila:
                 try:
                     # Determinar tipo de comunicação baseado no template ou conteúdo
                     tipo_comunicacao = TipoComunicacao.EMAIL  # Default
-                    
+
                     if item.template_id:
                         template = self.db.query(ComunicacaoTemplate).filter(
                             ComunicacaoTemplate.id == item.template_id
                         ).first()
                         if template:
                             tipo_comunicacao = template.canal
-                    
+
                     # Criar request simulado
                     request = EnvioMensagemRequest(
                         template_id=item.template_id,
@@ -397,10 +397,10 @@ class ComunicacaoService:
                         origem_modulo=item.origem_modulo,
                         origem_id=item.origem_id
                     )
-                    
+
                     # Enviar
                     resultado = self._enviar_imediato(tipo_comunicacao, request, item.conteudo, item.assunto)
-                    
+
                     if resultado['sucesso']:
                         item.status = "ENVIADO"
                         item.processado_em = agora
@@ -408,29 +408,29 @@ class ComunicacaoService:
                     else:
                         item.tentativas += 1
                         item.erro_detalhes = resultado.get('mensagem')
-                        
+
                         if item.tentativas >= item.max_tentativas:
                             item.status = "ERRO"
                             item.processado_em = agora
-                        
+
                         erros += 1
-                    
+
                     processados += 1
-                    
+
                 except Exception as e:
                     logger.error(f"Erro ao processar item da fila {item.id}: {e}")
                     item.tentativas += 1
                     item.erro_detalhes = str(e)
-                    
+
                     if item.tentativas >= item.max_tentativas:
                         item.status = "ERRO"
                         item.processado_em = agora
-                    
+
                     erros += 1
                     processados += 1
-            
+
             self.db.commit()
-            
+
             return {
                 'sucesso': True,
                 'processados': processados,
@@ -438,14 +438,14 @@ class ComunicacaoService:
                 'erros': erros,
                 'mensagem': f'Processados {processados} itens da fila'
             }
-            
+
         except Exception as e:
             logger.error(f"Erro ao processar fila: {e}")
             return {
                 'sucesso': False,
                 'mensagem': f'Erro ao processar fila: {str(e)}'
             }
-    
+
     def gerar_comunicacao_os(self, os_id: int, status: str, dados_os: Dict[str, Any]):
         """Gerar comunicação automática para OS"""
         try:
@@ -456,21 +456,21 @@ class ComunicacaoService:
                 'CONCLUIDA': 'OS_CONCLUIDA',
                 'CANCELADA': 'OS_CANCELADA'
             }
-            
+
             tipo_template = template_map.get(status)
             if not tipo_template:
                 return
-            
+
             # Buscar template automático
             template = self.db.query(ComunicacaoTemplate).filter(
                 ComunicacaoTemplate.tipo == tipo_template,
                 ComunicacaoTemplate.automatico == True,
                 ComunicacaoTemplate.ativo == True
             ).first()
-            
+
             if not template:
                 return
-            
+
             # Criar request de envio
             request = EnvioMensagemRequest(
                 template_id=template.id,
@@ -482,13 +482,13 @@ class ComunicacaoService:
                 origem_modulo='OS',
                 origem_id=os_id
             )
-            
+
             # Enviar
             self.enviar_mensagem(request)
-            
+
         except Exception as e:
             logger.error(f"Erro ao gerar comunicação OS: {e}")
-    
+
     def gerar_comunicacao_agendamento(self, agendamento_id: int, tipo: str, dados_agendamento: Dict[str, Any]):
         """Gerar comunicação automática para agendamento"""
         try:
@@ -498,27 +498,27 @@ class ComunicacaoService:
                 'LEMBRETE': 'AGENDAMENTO_LEMBRETE',
                 'CANCELADO': 'AGENDAMENTO_CANCELADO'
             }
-            
+
             tipo_template = template_map.get(tipo)
             if not tipo_template:
                 return
-            
+
             # Buscar template automático
             template = self.db.query(ComunicacaoTemplate).filter(
                 ComunicacaoTemplate.tipo == tipo_template,
                 ComunicacaoTemplate.automatico == True,
                 ComunicacaoTemplate.ativo == True
             ).first()
-            
+
             if not template:
                 return
-            
+
             # Agendar lembrete para 1 dia antes se for lembrete
             agendar_para = None
             if tipo == 'LEMBRETE' and dados_agendamento.get('data_agendamento'):
                 data_agendamento = datetime.fromisoformat(dados_agendamento['data_agendamento'])
                 agendar_para = data_agendamento - timedelta(days=1)
-            
+
             # Criar request de envio
             request = EnvioMensagemRequest(
                 template_id=template.id,
@@ -531,19 +531,19 @@ class ComunicacaoService:
                 origem_modulo='AGENDAMENTO',
                 origem_id=agendamento_id
             )
-            
+
             # Enviar
             self.enviar_mensagem(request)
-            
+
         except Exception as e:
             logger.error(f"Erro ao gerar comunicação agendamento: {e}")
 
 class TemplateService:
     """Serviço para gestão de templates"""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     def criar_templates_padrao(self):
         """Criar templates padrão do sistema"""
         templates_padrao = [
@@ -599,15 +599,15 @@ Equipe Primotex''',
                 }
             }
         ]
-        
+
         for template_data in templates_padrao:
             # Verificar se já existe
             existe = self.db.query(ComunicacaoTemplate).filter(
                 ComunicacaoTemplate.nome == template_data['nome']
             ).first()
-            
+
             if not existe:
                 template = ComunicacaoTemplate(**template_data)
                 self.db.add(template)
-        
+
         self.db.commit()

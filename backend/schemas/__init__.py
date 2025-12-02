@@ -19,42 +19,42 @@ from .ordem_servico_schemas import (
     TipoOS,
     FaseOSEnum,
     StatusFase,
-    
+
     # Schemas principais
     OrdemServicoBase,
     OrdemServicoCreate,
     OrdemServicoUpdate,
     OrdemServicoResponse,
-    
+
     # Schemas de fases
     FaseOSBase,
     FaseOSCreate,
     FaseOSUpdate,
     FaseOSResponse,
-    
+
     # Schemas de visita técnica
     VisitaTecnicaBase,
     VisitaTecnicaCreate,
     VisitaTecnicaUpdate,
     VisitaTecnicaResponse,
-    
+
     # Schemas de orçamento
     ItemOrcamentoBase,
     OrcamentoBase,
     OrcamentoCreate,
     OrcamentoUpdate,
     OrcamentoResponse,
-    
+
     # Schemas de listagem
     FiltrosOrdemServico,
     ResumoOrdemServico,
     ListagemOrdemServico,
-    
+
     # Schemas de ações
     MudancaFaseRequest,
     AtualizacaoStatusRequest,
     HistoricoMudanca,
-    
+
     # Schemas de relatórios
     EstatisticasOS,
     DashboardOS,
@@ -67,18 +67,18 @@ from .fornecedor_schemas import (
     StatusFornecedor,
     CategoriaFornecedor,
     PorteEmpresa,
-    
+
     # Schemas principais
     FornecedorBase,
     FornecedorCreate,
     FornecedorUpdate,
     FornecedorResponse,
-    
+
     # Schemas de listagem
     FornecedorFilter,
     FornecedorListItem,
     FornecedorListResponse,
-    
+
     # Schemas especiais
     FornecedorResumo,
     EstatisticasFornecedor
@@ -93,11 +93,11 @@ from .colaborador_schemas import (
     ColaboradorResponse,
     ColaboradorDetalhado,
     ColaboradorListagem,
-    
+
     # Schemas de filtros
     ColaboradorFiltros,
     PaginationParams,
-    
+
     # Schemas auxiliares
     DepartamentoBase,
     DepartamentoCreate,
@@ -105,7 +105,7 @@ from .colaborador_schemas import (
     CargoBase,
     CargoCreate,
     CargoResponse,
-    
+
     # Schemas de estatísticas
     EstatisticasColaboradores
 )
@@ -113,46 +113,46 @@ from .colaborador_schemas import (
 __all__ = [
     # Enums
     "StatusOS",
-    "PrioridadeOS", 
+    "PrioridadeOS",
     "TipoOS",
     "FaseOSEnum",
     "StatusFase",
-    
+
     # Schemas principais
     "OrdemServicoBase",
     "OrdemServicoCreate",
     "OrdemServicoUpdate",
     "OrdemServicoResponse",
-    
+
     # Schemas de fases
     "FaseOSBase",
     "FaseOSCreate",
     "FaseOSUpdate",
     "FaseOSResponse",
-    
+
     # Schemas de visita técnica
     "VisitaTecnicaBase",
     "VisitaTecnicaCreate",
     "VisitaTecnicaUpdate",
     "VisitaTecnicaResponse",
-    
+
     # Schemas de orçamento
     "ItemOrcamentoBase",
     "OrcamentoBase",
     "OrcamentoCreate",
-    "OrcamentoUpdate", 
+    "OrcamentoUpdate",
     "OrcamentoResponse",
-    
+
     # Schemas de listagem
     "FiltrosOrdemServico",
     "ResumoOrdemServico",
     "ListagemOrdemServico",
-    
+
     # Schemas de ações
     "MudancaFaseRequest",
     "AtualizacaoStatusRequest",
     "HistoricoMudanca",
-    
+
     # Schemas de relatórios
     "EstatisticasOS",
     "DashboardOS",

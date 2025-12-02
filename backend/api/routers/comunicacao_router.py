@@ -58,17 +58,17 @@ async def listar_templates(
 ):
     """Listar templates de comunicação com filtros"""
     query = db.query(ComunicacaoTemplate)
-    
+
     if tipo:
         query = query.filter(ComunicacaoTemplate.tipo == tipo)
     if canal:
         query = query.filter(ComunicacaoTemplate.canal == canal)
     if ativo is not None:
         query = query.filter(ComunicacaoTemplate.ativo == ativo)
-    
+
     total = query.count()
     templates = query.offset(skip).limit(limit).all()
-    
+
     return ListaTemplates(
         items=templates,
         total=total,
@@ -83,10 +83,10 @@ async def obter_template(template_id: int, db: Session = Depends(get_db)):
     template = db.query(ComunicacaoTemplate).filter(
         ComunicacaoTemplate.id == template_id
     ).first()
-    
+
     if not template:
         raise HTTPException(status_code=404, detail="Template não encontrado")
-    
+
     return template
 
 @router.post("/templates", response_model=ComunicacaoTemplateSchema)
@@ -99,15 +99,15 @@ async def criar_template(
     existe = db.query(ComunicacaoTemplate).filter(
         ComunicacaoTemplate.nome == template.nome
     ).first()
-    
+
     if existe:
         raise HTTPException(status_code=400, detail="Nome do template já existe")
-    
+
     db_template = ComunicacaoTemplate(**template.dict())
     db.add(db_template)
     db.commit()
     db.refresh(db_template)
-    
+
     return db_template
 
 @router.put("/templates/{template_id}", response_model=ComunicacaoTemplateSchema)
@@ -120,27 +120,27 @@ async def atualizar_template(
     db_template = db.query(ComunicacaoTemplate).filter(
         ComunicacaoTemplate.id == template_id
     ).first()
-    
+
     if not db_template:
         raise HTTPException(status_code=404, detail="Template não encontrado")
-    
+
     # Verificar nome duplicado se estiver mudando
     if template.nome and template.nome != db_template.nome:
         existe = db.query(ComunicacaoTemplate).filter(
             ComunicacaoTemplate.nome == template.nome,
             ComunicacaoTemplate.id != template_id
         ).first()
-        
+
         if existe:
             raise HTTPException(status_code=400, detail="Nome do template já existe")
-    
+
     # Atualizar campos
     for field, value in template.dict(exclude_unset=True).items():
         setattr(db_template, field, value)
-    
+
     db.commit()
     db.refresh(db_template)
-    
+
     return db_template
 
 @router.delete("/templates/{template_id}")
@@ -149,24 +149,24 @@ async def deletar_template(template_id: int, db: Session = Depends(get_db)):
     template = db.query(ComunicacaoTemplate).filter(
         ComunicacaoTemplate.id == template_id
     ).first()
-    
+
     if not template:
         raise HTTPException(status_code=404, detail="Template não encontrado")
-    
+
     # Verificar se tem comunicações associadas
     comunicacoes = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.template_id == template_id
     ).count()
-    
+
     if comunicacoes > 0:
         # Apenas desativar em vez de deletar
         template.ativo = False
         db.commit()
         return {"mensagem": "Template desativado (possui comunicações associadas)"}
-    
+
     db.delete(template)
     db.commit()
-    
+
     return {"mensagem": "Template deletado com sucesso"}
 
 @router.post("/templates/criar-padrao")
@@ -174,7 +174,7 @@ async def criar_templates_padrao(db: Session = Depends(get_db)):
     """Criar templates padrão do sistema"""
     service = TemplateService(db)
     service.criar_templates_padrao()
-    
+
     return {"mensagem": "Templates padrão criados com sucesso"}
 
 # ============================================================================
@@ -189,14 +189,14 @@ async def enviar_mensagem(
 ):
     """Enviar mensagem individual"""
     service = ComunicacaoService(db)
-    
+
     # Se for agendamento, processar em background
     if request.agendar_para and request.agendar_para > datetime.now():
         resultado = service.enviar_mensagem(request)
         if resultado.agendado:
             background_tasks.add_task(service.processar_fila)
         return resultado
-    
+
     # Envio imediato
     return service.enviar_mensagem(request)
 
@@ -208,18 +208,18 @@ async def enviar_lote(
 ):
     """Enviar mensagens em lote"""
     service = ComunicacaoService(db)
-    
+
     total_processados = 0
     sucessos = 0
     erros = 0
     detalhes = []
-    
+
     for destinatario in request.destinatarios:
         try:
             # Mesclar variáveis globais com específicas do destinatário
             variaveis = request.variaveis_globais or {}
             variaveis.update(destinatario.get('variaveis', {}))
-            
+
             # Criar request individual
             individual_request = EnvioMensagemRequest(
                 template_id=request.template_id,
@@ -231,23 +231,23 @@ async def enviar_lote(
                 agendar_para=request.agendar_para,
                 prioridade=request.prioridade
             )
-            
+
             resultado = service.enviar_mensagem(individual_request)
-            
+
             if resultado.sucesso:
                 sucessos += 1
             else:
                 erros += 1
-            
+
             detalhes.append({
                 'destinatario': destinatario['nome'],
                 'sucesso': resultado.sucesso,
                 'mensagem': resultado.mensagem,
                 'comunicacao_id': resultado.comunicacao_id
             })
-            
+
             total_processados += 1
-            
+
         except Exception as e:
             erros += 1
             detalhes.append({
@@ -257,11 +257,11 @@ async def enviar_lote(
                 'comunicacao_id': None
             })
             total_processados += 1
-    
+
     # Processar fila em background se houver agendamentos
     if request.agendar_para:
         background_tasks.add_task(service.processar_fila)
-    
+
     return EnvioLoteResponse(
         total_processados=total_processados,
         sucessos=sucessos,
@@ -274,7 +274,7 @@ async def processar_fila_manual(db: Session = Depends(get_db)):
     """Processar fila de mensagens manualmente"""
     service = ComunicacaoService(db)
     resultado = service.processar_fila()
-    
+
     return resultado
 
 # ============================================================================
@@ -295,7 +295,7 @@ async def listar_historico(
 ):
     """Listar histórico de comunicações com filtros"""
     query = db.query(ComunicacaoHistorico)
-    
+
     if tipo:
         query = query.filter(ComunicacaoHistorico.tipo == tipo)
     if status:
@@ -308,10 +308,10 @@ async def listar_historico(
         query = query.filter(ComunicacaoHistorico.criado_em >= data_inicio)
     if data_fim:
         query = query.filter(ComunicacaoHistorico.criado_em <= data_fim)
-    
+
     total = query.count()
     comunicacoes = query.order_by(ComunicacaoHistorico.criado_em.desc()).offset(skip).limit(limit).all()
-    
+
     return ListaComunicacoes(
         items=comunicacoes,
         total=total,
@@ -326,10 +326,10 @@ async def obter_comunicacao(comunicacao_id: int, db: Session = Depends(get_db)):
     comunicacao = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.id == comunicacao_id
     ).first()
-    
+
     if not comunicacao:
         raise HTTPException(status_code=404, detail="Comunicação não encontrada")
-    
+
     return comunicacao
 
 @router.put("/historico/{comunicacao_id}/status")
@@ -343,12 +343,12 @@ async def atualizar_status_comunicacao(
     comunicacao = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.id == comunicacao_id
     ).first()
-    
+
     if not comunicacao:
         raise HTTPException(status_code=404, detail="Comunicação não encontrada")
-    
+
     comunicacao.status = status
-    
+
     # Atualizar timestamps baseado no status
     agora = datetime.now()
     if status == StatusComunicacao.ENVIADO and not comunicacao.enviado_em:
@@ -357,12 +357,12 @@ async def atualizar_status_comunicacao(
         comunicacao.entregue_em = agora
     elif status == StatusComunicacao.LIDO and not comunicacao.lido_em:
         comunicacao.lido_em = agora
-    
+
     if detalhes:
         comunicacao.provider_response = detalhes
-    
+
     db.commit()
-    
+
     return {"mensagem": f"Status atualizado para {status.value}"}
 
 # ============================================================================
@@ -377,12 +377,12 @@ async def listar_configuracoes(
 ):
     """Listar configurações de comunicação"""
     query = db.query(ComunicacaoConfig)
-    
+
     if tipo:
         query = query.filter(ComunicacaoConfig.tipo == tipo)
     if ativo is not None:
         query = query.filter(ComunicacaoConfig.ativo == ativo)
-    
+
     return query.all()
 
 @router.post("/configuracoes", response_model=ComunicacaoConfigSchema)
@@ -397,12 +397,12 @@ async def criar_configuracao(
             ComunicacaoConfig.tipo == config.tipo,
             ComunicacaoConfig.padrao == True
         ).update({ComunicacaoConfig.padrao: False})
-    
+
     db_config = ComunicacaoConfig(**config.dict())
     db.add(db_config)
     db.commit()
     db.refresh(db_config)
-    
+
     return db_config
 
 @router.put("/configuracoes/{config_id}", response_model=ComunicacaoConfigSchema)
@@ -415,10 +415,10 @@ async def atualizar_configuracao(
     db_config = db.query(ComunicacaoConfig).filter(
         ComunicacaoConfig.id == config_id
     ).first()
-    
+
     if not db_config:
         raise HTTPException(status_code=404, detail="Configuração não encontrada")
-    
+
     # Se está tornando padrão, remover padrão das outras
     if config.padrao:
         db.query(ComunicacaoConfig).filter(
@@ -426,14 +426,14 @@ async def atualizar_configuracao(
             ComunicacaoConfig.id != config_id,
             ComunicacaoConfig.padrao == True
         ).update({ComunicacaoConfig.padrao: False})
-    
+
     # Atualizar campos
     for field, value in config.dict(exclude_unset=True).items():
         setattr(db_config, field, value)
-    
+
     db.commit()
     db.refresh(db_config)
-    
+
     return db_config
 
 # ============================================================================
@@ -447,50 +447,50 @@ async def obter_metricas_dashboard(db: Session = Depends(get_db)):
     inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
     inicio_semana = inicio_dia - timedelta(days=agora.weekday())
     inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    
+
     # Contar comunicações
     comunicacoes_hoje = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.criado_em >= inicio_dia
     ).count()
-    
+
     comunicacoes_semana = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.criado_em >= inicio_semana
     ).count()
-    
+
     comunicacoes_mes = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.criado_em >= inicio_mes
     ).count()
-    
+
     # Taxa de entrega média
     total_enviados = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.criado_em >= inicio_mes
     ).count()
-    
+
     total_entregues = db.query(ComunicacaoHistorico).filter(
         ComunicacaoHistorico.criado_em >= inicio_mes,
         ComunicacaoHistorico.status.in_([StatusComunicacao.ENTREGUE, StatusComunicacao.LIDO])
     ).count()
-    
+
     taxa_entrega = (total_entregues / total_enviados) if total_enviados > 0 else 0
-    
+
     # Outros contadores
     templates_ativos = db.query(ComunicacaoTemplate).filter(
         ComunicacaoTemplate.ativo == True
     ).count()
-    
+
     configuracoes_ativas = db.query(ComunicacaoConfig).filter(
         ComunicacaoConfig.ativo == True
     ).count()
-    
+
     fila_pendente = db.query(ComunicacaoFila).filter(
         ComunicacaoFila.status == "PENDENTE"
     ).count()
-    
+
     # Últimas comunicações
     ultimas_comunicacoes = db.query(ComunicacaoHistorico).order_by(
         ComunicacaoHistorico.criado_em.desc()
     ).limit(5).all()
-    
+
     return MetricasDashboard(
         comunicacoes_hoje=comunicacoes_hoje,
         comunicacoes_semana=comunicacoes_semana,
@@ -514,23 +514,23 @@ async def obter_estatisticas(
         ComunicacaoHistorico.criado_em >= periodo_inicio,
         ComunicacaoHistorico.criado_em <= periodo_fim
     ).all()
-    
+
     # Calcular estatísticas
     total_enviados = len(comunicacoes)
     total_entregues = len([c for c in comunicacoes if c.status in [StatusComunicacao.ENTREGUE, StatusComunicacao.LIDO]])
     total_lidos = len([c for c in comunicacoes if c.status == StatusComunicacao.LIDO])
     total_erros = len([c for c in comunicacoes if c.status == StatusComunicacao.ERRO])
-    
+
     # Por tipo
     email_total = len([c for c in comunicacoes if c.tipo == TipoComunicacao.EMAIL])
     whatsapp_total = len([c for c in comunicacoes if c.tipo == TipoComunicacao.WHATSAPP])
     sms_total = len([c for c in comunicacoes if c.tipo == TipoComunicacao.SMS])
-    
+
     # Por módulo
     os_total = len([c for c in comunicacoes if c.origem_modulo == 'OS'])
     agendamento_total = len([c for c in comunicacoes if c.origem_modulo == 'AGENDAMENTO'])
     financeiro_total = len([c for c in comunicacoes if c.origem_modulo == 'FINANCEIRO'])
-    
+
     return EstatisticasComunicacao(
         periodo_inicio=periodo_inicio,
         periodo_fim=periodo_fim,

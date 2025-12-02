@@ -35,7 +35,33 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 REM Iniciar sistema
-echo Iniciando sistema...
+REM =====================================================
+REM MIGRADO: 17/11/2025 - Backend Robusto v2.0
+REM Auto-inicia backend se não estiver rodando
+REM =====================================================
+
+echo Verificando backend...
+echo.
+
+REM Tentar conectar na porta 8002
+curl http://127.0.0.1:8002/health 2>nul >nul
+
+if errorlevel 1 (
+    echo Backend nao detectado - iniciando Backend Robusto v2.0...
+    echo.
+    
+    REM Iniciar backend robusto em janela separada
+    start "Backend ERP Primotex - ROBUSTO v2.0" INICIAR_BACKEND_ROBUSTO.bat
+    
+    echo Aguardando 5 segundos para backend inicializar...
+    timeout /t 5 /nobreak >nul
+    echo.
+) else (
+    echo Backend ja esta rodando!
+    echo.
+)
+
+echo Iniciando sistema desktop...
 echo.
 
 .venv\Scripts\python.exe INICIAR_SISTEMA.py

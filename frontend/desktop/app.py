@@ -20,7 +20,7 @@ sys.path.append(str(Path(__file__).parent))
 def verificar_servidor():
     """Verificar se o servidor backend está rodando"""
     import requests
-    
+
     try:
         response = requests.get("http://127.0.0.1:8002/api/v1/health", timeout=3)
         return response.status_code == 200
@@ -31,16 +31,16 @@ def iniciar_servidor():
     """Iniciar servidor backend se necessário"""
     import subprocess
     import time
-    
+
     print("🚀 Iniciando servidor backend...")
-    
+
     # Caminho para o backend
     backend_path = Path(__file__).parent.parent.parent / "backend"
-    
+
     if not backend_path.exists():
         print("❌ Diretório backend não encontrado")
         return False
-    
+
     try:
         # Iniciar uvicorn em processo separado
         subprocess.Popen([
@@ -50,7 +50,7 @@ def iniciar_servidor():
             "--port", "8002",
             "--reload"
         ], cwd=str(backend_path.parent))
-        
+
         # Aguardar inicialização
         print("⏳ Aguardando servidor inicializar...")
         for tentativa in range(10):
@@ -59,10 +59,10 @@ def iniciar_servidor():
                 print("✅ Servidor backend online!")
                 return True
             print(f"   Tentativa {tentativa+1}/10...")
-        
+
         print("❌ Timeout ao iniciar servidor")
         return False
-        
+
     except Exception as e:
         print(f"❌ Erro ao iniciar servidor: {e}")
         return False
@@ -104,46 +104,46 @@ def importar_modulos():
 def executar_ciclo_login_dashboard():
     """Executa ciclo completo de login e dashboard"""
     login_window_class, dashboard_window_class = importar_modulos()
-    
+
     if not login_window_class or not dashboard_window_class:
         return False
-    
+
     # Login
     print("\n🔐 Iniciando tela de login...")
     login_window = login_window_class()
     user_data = login_window.run()
-    
+
     if not user_data:
         print("👋 Login cancelado pelo usuário")
         return False
-    
+
     print(f"✅ Login realizado: {user_data.get('user', {}).get('username')}")
-    
+
     # Dashboard
     print("\n📊 Iniciando dashboard principal...")
     dashboard = dashboard_window_class(user_data)
     dashboard.run()
-    
+
     # Perguntar se quer fazer novo login
     print("\n🔄 Dashboard fechado")
     return input("Deseja fazer novo login? (s/n): ").lower() == 's'
 
 def main():
     """Função principal da aplicação"""
-    
+
     exibir_cabecalho()
-    
+
     # Verificar backend
     if not verificar_e_iniciar_backend():
         return
-    
+
     # Executar sequência completa
     while True:
         try:
             continuar = executar_ciclo_login_dashboard()
             if not continuar:
                 break
-                
+
         except KeyboardInterrupt:
             print("\n⏹️ Aplicação interrompida pelo usuário")
             break
@@ -152,7 +152,7 @@ def main():
             import traceback
             traceback.print_exc()
             break
-    
+
     print("\n👋 Sistema ERP Primotex encerrado")
     print("   Obrigado por usar nosso sistema!")
 

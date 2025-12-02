@@ -72,7 +72,7 @@ class PorteEmpresa(str, Enum):
 
 class FornecedorBase(BaseModel):
     """Schema base para fornecedor"""
-    
+
     # Identificação básica
     cnpj_cpf: str = Field(
         ...,
@@ -81,7 +81,7 @@ class FornecedorBase(BaseModel):
         description="CNPJ ou CPF (apenas números)",
         example="12345678901234"
     )
-    
+
     razao_social: str = Field(
         ...,
         min_length=3,
@@ -89,42 +89,42 @@ class FornecedorBase(BaseModel):
         description="Razão social ou nome completo",
         example="Materiais de Construção Silva Ltda"
     )
-    
+
     nome_fantasia: Optional[str] = Field(
         None,
         max_length=200,
         description="Nome fantasia ou apelido",
         example="Silva Materiais"
     )
-    
+
     tipo_pessoa: TipoFornecedor = Field(
         default=TipoFornecedor.PESSOA_JURIDICA,
         description="Tipo de pessoa"
     )
-    
+
     inscricao_estadual: Optional[str] = Field(
         None,
         max_length=20,
         description="Inscrição estadual"
     )
-    
+
     # Categorização
     categoria: CategoriaFornecedor = Field(
         default=CategoriaFornecedor.OUTROS,
         description="Categoria principal do fornecedor"
     )
-    
+
     subcategoria: Optional[str] = Field(
         None,
         max_length=100,
         description="Subcategoria específica"
     )
-    
+
     porte_empresa: Optional[PorteEmpresa] = Field(
         None,
         description="Porte da empresa"
     )
-    
+
     # Contato
     contato_principal: Optional[str] = Field(
         None,
@@ -132,37 +132,37 @@ class FornecedorBase(BaseModel):
         description="Nome do responsável/vendedor",
         example="João Silva"
     )
-    
+
     telefone: Optional[str] = Field(
         None,
         max_length=20,
         description="Telefone principal",
         example="(11) 99999-9999"
     )
-    
+
     telefone_2: Optional[str] = Field(
         None,
         max_length=20,
         description="Telefone secundário"
     )
-    
+
     email: Optional[EmailStr] = Field(
         None,
         description="Email principal de contato",
         example="contato@silvamateriais.com.br"
     )
-    
+
     email_2: Optional[EmailStr] = Field(
         None,
         description="Email secundário"
     )
-    
+
     website: Optional[str] = Field(
         None,
         max_length=200,
         description="Site da empresa"
     )
-    
+
     # Endereço
     cep: Optional[str] = Field(
         None,
@@ -170,44 +170,44 @@ class FornecedorBase(BaseModel):
         description="CEP formatado",
         example="01234-567"
     )
-    
+
     logradouro: Optional[str] = Field(
         None,
         max_length=200,
         description="Logradouro"
     )
-    
+
     numero: Optional[str] = Field(
         None,
         max_length=20,
         description="Número"
     )
-    
+
     complemento: Optional[str] = Field(
         None,
         max_length=100,
         description="Complemento"
     )
-    
+
     bairro: Optional[str] = Field(
         None,
         max_length=100,
         description="Bairro"
     )
-    
+
     cidade: Optional[str] = Field(
         None,
         max_length=100,
         description="Cidade"
     )
-    
+
     estado: Optional[str] = Field(
         None,
         max_length=2,
         description="UF do estado",
         example="SP"
     )
-    
+
     # Informações comerciais
     condicoes_pagamento: Optional[str] = Field(
         None,
@@ -215,149 +215,151 @@ class FornecedorBase(BaseModel):
         description="Condições padrão de pagamento",
         example="30 dias"
     )
-    
+
     prazo_entrega_padrao: Optional[int] = Field(
         None,
         ge=0,
         le=365,
         description="Prazo médio de entrega em dias"
     )
-    
+
     valor_minimo_pedido: Optional[Decimal] = Field(
         None,
         ge=0,
         description="Valor mínimo para pedidos"
     )
-    
+
     desconto_padrao: Optional[Decimal] = Field(
         None,
         ge=0,
         le=100,
         description="Percentual de desconto padrão"
     )
-    
+
     avaliacao: Optional[int] = Field(
         None,
         ge=1,
         le=5,
         description="Avaliação do fornecedor (1 a 5 estrelas)"
     )
-    
+
     # Dados bancários
     banco: Optional[str] = Field(
         None,
         max_length=100,
         description="Nome do banco principal"
     )
-    
+
     agencia: Optional[str] = Field(
         None,
         max_length=20,
         description="Agência bancária"
     )
-    
+
     conta: Optional[str] = Field(
         None,
         max_length=30,
         description="Número da conta corrente"
     )
-    
+
     chave_pix: Optional[str] = Field(
         None,
         max_length=100,
         description="Chave PIX"
     )
-    
+
     # Observações
     observacoes: Optional[str] = Field(
         None,
         description="Observações gerais"
     )
-    
+
     historico_problemas: Optional[str] = Field(
         None,
         description="Histórico de problemas"
     )
-    
+
     tags: Optional[str] = Field(
         None,
         description="Tags em formato JSON"
     )
-    
+
     # Status
     status: StatusFornecedor = Field(
         default=StatusFornecedor.ATIVO,
         description="Status do fornecedor"
     )
-    
+
     ativo: bool = Field(
         default=True,
         description="Se o fornecedor está ativo"
     )
-    
+
     motivo_inativacao: Optional[str] = Field(
         None,
         max_length=200,
         description="Motivo da inativação"
     )
-    
+
     @validator('cnpj_cpf')
     def validate_cnpj_cpf(cls, v):
         """Valida CNPJ/CPF"""
         if not v:
             return v
-        
+
         # Remove caracteres não numéricos
         doc = ''.join(filter(str.isdigit, v))
-        
+
         if len(doc) not in [11, 14]:
-            raise ValueError("CNPJ deve ter 14 dígitos e CPF deve ter 11 dígitos")
-        
+            raise ValueError(
+                "CNPJ deve ter 14 dígitos e CPF deve ter 11 dígitos"
+            )
+
         return doc
-    
+
     @validator('telefone', 'telefone_2')
     def validate_telefone(cls, v):
         """Valida telefone"""
         if not v:
             return v
-        
+
         # Remove caracteres não numéricos
         tel = ''.join(filter(str.isdigit, v))
-        
+
         if len(tel) not in [10, 11]:
             raise ValueError("Telefone deve ter 10 ou 11 dígitos")
-        
+
         return tel
-    
+
     @validator('cep')
     def validate_cep(cls, v):
         """Valida CEP"""
         if not v:
             return v
-        
+
         # Remove caracteres não numéricos
         cep = ''.join(filter(str.isdigit, v))
-        
+
         if len(cep) != 8:
             raise ValueError("CEP deve ter 8 dígitos")
-        
+
         return f"{cep[:5]}-{cep[5:]}"
-    
+
     @validator('estado')
     def validate_estado(cls, v):
         """Valida UF do estado"""
         if not v:
             return v
-        
+
         estados_validos = [
             'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
             'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
             'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
         ]
-        
+
         if v.upper() not in estados_validos:
             raise ValueError("UF do estado inválida")
-        
+
         return v.upper()
 
 
@@ -367,7 +369,7 @@ class FornecedorBase(BaseModel):
 
 class FornecedorCreate(FornecedorBase):
     """Schema para criação de fornecedor"""
-    
+
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -400,7 +402,7 @@ class FornecedorCreate(FornecedorBase):
 
 class FornecedorUpdate(BaseModel):
     """Schema para atualização de fornecedor"""
-    
+
     razao_social: Optional[str] = Field(
         None,
         min_length=3,
@@ -439,7 +441,7 @@ class FornecedorUpdate(BaseModel):
     status: Optional[StatusFornecedor] = None
     ativo: Optional[bool] = None
     motivo_inativacao: Optional[str] = Field(None, max_length=200)
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -449,20 +451,20 @@ class FornecedorUpdate(BaseModel):
 
 class FornecedorResponse(FornecedorBase):
     """Schema de resposta para fornecedor"""
-    
+
     id: int
     endereco_completo: Optional[str] = None
     data_cadastro: datetime
     data_atualizacao: Optional[datetime] = None
     usuario_cadastro_id: Optional[int] = None
     usuario_atualizacao_id: Optional[int] = None
-    
+
     # Campos calculados
     nome_exibicao: Optional[str] = None
     documento_formatado: Optional[str] = None
     telefone_formatado: Optional[str] = None
     contato_completo: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -472,13 +474,13 @@ class FornecedorResponse(FornecedorBase):
 
 class FornecedorFilter(BaseModel):
     """Schema para filtros de listagem"""
-    
+
     # Filtros de texto
     search: Optional[str] = Field(
         None,
         description="Busca por nome, CNPJ/CPF, email"
     )
-    
+
     # Filtros específicos
     categoria: Optional[CategoriaFornecedor] = None
     tipo_pessoa: Optional[TipoFornecedor] = None
@@ -486,18 +488,18 @@ class FornecedorFilter(BaseModel):
     ativo: Optional[bool] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
-    
+
     # Filtros por avaliação
     avaliacao_minima: Optional[int] = Field(None, ge=1, le=5)
-    
+
     # Filtros por data
     data_cadastro_inicio: Optional[datetime] = None
     data_cadastro_fim: Optional[datetime] = None
-    
+
     # Paginação
     page: int = Field(default=1, ge=1, description="Página")
     size: int = Field(default=50, ge=1, le=200, description="Itens por página")
-    
+
     # Ordenação
     order_by: Optional[str] = Field(
         default="razao_social",
@@ -507,13 +509,13 @@ class FornecedorFilter(BaseModel):
         default="asc",
         description="Direção da ordenação (asc/desc)"
     )
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class FornecedorListItem(BaseModel):
     """Item da lista de fornecedores"""
-    
+
     id: int
     cnpj_cpf: str
     razao_social: str
@@ -526,23 +528,23 @@ class FornecedorListItem(BaseModel):
     ativo: bool
     avaliacao: Optional[int] = None
     data_cadastro: datetime
-    
+
     # Campos calculados
     nome_exibicao: Optional[str] = None
     documento_formatado: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class FornecedorListResponse(BaseModel):
     """Resposta da listagem de fornecedores"""
-    
+
     items: List[FornecedorListItem]
     total: int
     page: int
     size: int
     pages: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -552,26 +554,26 @@ class FornecedorListResponse(BaseModel):
 
 class FornecedorResumo(BaseModel):
     """Resumo do fornecedor para seleção"""
-    
+
     id: int
     nome_exibicao: str
     documento_formatado: str
     categoria: str
     telefone: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class EstatisticasFornecedor(BaseModel):
     """Estatísticas dos fornecedores"""
-    
+
     total_fornecedores: int
     total_ativos: int
     total_inativos: int
     total_por_categoria: dict
     total_por_estado: dict
     avaliacao_media: Optional[float] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -582,21 +584,21 @@ class EstatisticasFornecedor(BaseModel):
 __all__ = [
     # Enums
     'TipoFornecedor',
-    'StatusFornecedor', 
+    'StatusFornecedor',
     'CategoriaFornecedor',
     'PorteEmpresa',
-    
+
     # Schemas principais
     'FornecedorBase',
     'FornecedorCreate',
     'FornecedorUpdate',
     'FornecedorResponse',
-    
+
     # Schemas de listagem
     'FornecedorFilter',
     'FornecedorListItem',
     'FornecedorListResponse',
-    
+
     # Schemas especiais
     'FornecedorResumo',
     'EstatisticasFornecedor'

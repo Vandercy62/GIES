@@ -69,6 +69,21 @@ class OrdemServico(Base):
     valor_final = Column(DECIMAL(10, 2), default=0.00)
     forma_pagamento = Column(String(50))
     
+    # Croqui técnico (NOVO - FASE 104)
+    dados_croqui_json = Column(JSON, nullable=True)  # Armazena objetos do canvas
+    
+    # Orçamento (NOVO - FASE 104 TAREFA 2)
+    dados_orcamento_json = Column(JSON, nullable=True)  # Armazena itens do orçamento
+    
+    # Medições técnicas (NOVO - FASE 104 TAREFA 5)
+    dados_medicoes_json = Column(JSON, nullable=True)  # Armazena medições (área, perímetro, linear, qtd)
+    
+    # Materiais utilizados (NOVO - FASE 104 TAREFA 6)
+    dados_materiais_json = Column(JSON, nullable=True)  # Controle de materiais aplicados/devolvidos
+    
+    # Equipe alocada (NOVO - FASE 104 TAREFA 7)
+    dados_equipe_json = Column(JSON, nullable=True)  # Gerenciamento de equipe na OS
+    
     # Localização do serviço
     endereco_execucao = Column(Text)  # Pode ser diferente do endereço do cliente
     cidade_execucao = Column(String(100))

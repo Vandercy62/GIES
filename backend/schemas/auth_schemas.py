@@ -29,7 +29,7 @@ class LoginRequest(BaseModel):
     """Schema para request de login"""
     username: str = Field(..., min_length=3, max_length=50, description=FIELD_NOME_USUARIO)
     password: str = Field(..., min_length=6, max_length=50, description="Senha")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -44,7 +44,7 @@ class LoginResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Tipo do token")
     expires_in: int = Field(..., description="Tempo de expiração em segundos")
     user: "UserResponse" = Field(..., description="Dados do usuário")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -78,7 +78,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema para criação de usuário"""
     password: str = Field(..., min_length=6, max_length=50, description="Senha")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -104,7 +104,7 @@ class ForgotPasswordRequest(BaseModel):
     """Schema para solicitação de recuperação de senha"""
     username: str = Field(..., min_length=3, max_length=50, description="Nome de usuário")
     email: EmailStr = Field(..., description="Email cadastrado")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -118,7 +118,7 @@ class PasswordRecoveryResponse(BaseModel):
     message: str = Field(..., description="Mensagem de sucesso")
     temporary_password: str = Field(..., description="Senha temporária gerada")
     username: str = Field(..., description="Nome de usuário")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -139,7 +139,7 @@ class UserResponse(BaseModel):
     data_criacao: datetime = Field(..., description="Data de criação")
     ultima_atividade: Optional[datetime] = Field(None, description="Última atividade")
     observacoes: Optional[str] = Field(None, description=FIELD_OBSERVACOES)
-    
+
     class Config:
         from_attributes = True
 
@@ -152,13 +152,13 @@ class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., min_length=6, max_length=50, description="Senha atual")
     new_password: str = Field(..., min_length=6, max_length=50, description="Nova senha")
     confirm_password: str = Field(..., min_length=6, max_length=50, description="Confirmação da nova senha")
-    
+
     def validate_passwords_match(self):
         """Validar se as senhas coincidem"""
         if self.new_password != self.confirm_password:
             raise ValueError("Nova senha e confirmação não coincidem")
         return True
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -173,7 +173,7 @@ class PasswordResetRequest(BaseModel):
     user_id: int = Field(..., description="ID do usuário")
     new_password: str = Field(..., min_length=6, max_length=50, description="Nova senha")
     confirm_password: str = Field(..., min_length=6, max_length=50, description="Confirmação da nova senha")
-    
+
     def validate_passwords_match(self):
         """Validar se as senhas coincidem"""
         if self.new_password != self.confirm_password:
@@ -220,7 +220,7 @@ class SuccessResponse(BaseModel):
     """Schema para response de sucesso"""
     success: bool = Field(default=True, description="Status de sucesso")
     message: str = Field(..., description="Mensagem de sucesso")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -234,7 +234,7 @@ class ErrorResponse(BaseModel):
     success: bool = Field(default=False, description="Status de sucesso")
     error: str = Field(..., description="Mensagem de erro")
     detail: Optional[str] = Field(None, description="Detalhes do erro")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
